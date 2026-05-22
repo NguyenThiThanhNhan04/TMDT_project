@@ -1,11 +1,7 @@
 package com.constructx.backend.service;
 
-import com.constructx.backend.dto.response.ContractorJobResponse;
-import com.constructx.backend.dto.response.ProjectResponse;
-import com.constructx.backend.entity.Bid;
-import com.constructx.backend.entity.ContractJob;
-import com.constructx.backend.entity.Project;
-import com.constructx.backend.entity.User;
+import com.constructx.backend.dto.response.*;
+import com.constructx.backend.entity.*;
 import com.constructx.backend.repository.BidRepository;
 import com.constructx.backend.repository.ContractJobRepository;
 import com.constructx.backend.repository.ProjectRepository;
@@ -137,6 +133,113 @@ public class ContractJobService {
                 .status(job.getStatus().name())
                 .startedAt(job.getStartedAt())
                 .createdAt(job.getCreatedAt())
+                .build();
+    }
+
+    @Transactional(readOnly = true)
+    public JobDetailResponse getJobDetail(Long jobId) {
+
+        String email = SecurityContextHolder.getContext()
+                .getAuthentication()
+                .getName();
+
+        ContractJob job = contractJobRepository
+                .findJobDetail(jobId)
+                .orElseThrow(() ->
+                        new RuntimeException("Job not found"));
+
+        // chỉ contractor hoặc customer được xem
+        boolean allowed =
+                job.getCustomer().getEmail().equals(email)
+                        || job.getContractor().getEmail().equals(email);
+
+        if (!allowed) {
+            throw new RuntimeException("Bạn không có quyền");
+        }
+
+        int totalProgress = 0;
+
+        if (job.getWorkPlan() != null) {
+
+            totalProgress = job.getWorkPlan()
+                    .getMilestones()
+                    .stream()
+                    .filter(m ->
+                            m.getStatus()
+                                    == WorkMilestone.Status.COMPLETED
+                    )
+                    .mapToInt(WorkMilestone::getProgressPercent)
+                    .sum();
+        }
+
+        return JobDetailResponse.builder()
+                .jobId(job.getId())
+                .projectName(job.getProject().getName())
+                .category(job.getProject().getCategory())
+                .area(job.getProject().getArea())
+                .style(job.getProject().getStyle())
+                .address(job.getProject().getAddress())
+                .description(job.getProject().getDescription())
+                .customerName(job.getCustomer().getFullName())
+                .contractorName(job.getContractor().getFullName())
+                .agreedPrice(job.getAgreedPrice())
+                .status(job.getStatus().name())
+                .totalProgress(totalProgress)
+                .workPlan(mapWorkPlan(job.getWorkPlan()))
+                .build();
+    }
+    private WorkPlanDetailResponse mapWorkPlan(
+            WorkPlan workPlan
+    ) {
+
+        if (workPlan == null) {
+            return null;
+        }
+
+        return WorkPlanDetailResponse.builder()
+                .id(workPlan.getId())
+                .note(workPlan.getNote())
+                .status(workPlan.getStatus().name())
+                .milestones(
+                        workPlan.getMilestones()
+                                .stream()
+                                .map(this::mapMilestone)
+                                .toList()
+                )
+                .build();
+    }
+    private MilestoneDetailResponse mapMilestone(
+            WorkMilestone milestone
+    ) {
+
+        return MilestoneDetailResponse.builder()
+                .id(milestone.getId())
+                .title(milestone.getTitle())
+                .description(milestone.getDescription())
+                .amount(milestone.getAmount())
+                .progressPercent(milestone.getProgressPercent())
+                .stepOrder(milestone.getStepOrder())
+                .status(milestone.getStatus().name())
+                .deadline(milestone.getDeadline())
+                .updates(
+                        milestone.getUpdates()
+                                .stream()
+                                .map(this::mapUpdate)
+                                .toList()
+                )
+                .build();
+    }
+    private MilestoneUpdateResponse mapUpdate(
+            MilestoneUpdate update
+    ) {
+
+        return MilestoneUpdateResponse.builder()
+                .id(update.getId())
+                .milestoneId(update.getMilestone().getId())
+                .title(update.getTitle())
+                .content(update.getContent())
+                .imageUrl(update.getImageUrl())
+                .createdAt(update.getCreatedAt())
                 .build();
     }
 }

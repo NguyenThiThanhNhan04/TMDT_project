@@ -38,6 +38,12 @@ public class ContractJob {
     @JoinColumn(name = "contractor_id", nullable = false)
     private User contractor;
 
+    // kế hoạch thi công
+    @OneToOne(mappedBy = "contractJob",
+            fetch = FetchType.LAZY,
+            cascade = CascadeType.ALL)
+    private WorkPlan workPlan;
+
     private Long agreedPrice;
 
     @Enumerated(EnumType.STRING)

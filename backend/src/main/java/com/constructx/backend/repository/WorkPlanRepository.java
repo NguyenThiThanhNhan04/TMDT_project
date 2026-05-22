@@ -9,4 +9,9 @@ public interface WorkPlanRepository
         extends JpaRepository<WorkPlan, Long> {
 
     Optional<WorkPlan> findByContractJobId(Long jobId);
+
+    Optional<WorkPlan> findByContractJobIdAndStatus(
+            Long jobId,
+            WorkPlan.Status status
+    );
 }

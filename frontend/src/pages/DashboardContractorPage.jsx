@@ -148,7 +148,7 @@ const DashboardContractorPage = () => {
                         </h3>
 
                         <p className="text-sm text-gray-400 mt-1">
-                            Khi được khách hàng chọn bạn sẽ thấy tại đây
+                            {/* Khi được khách hàng chọn bạn sẽ thấy tại đây */}
                         </p>
                     </div>
 

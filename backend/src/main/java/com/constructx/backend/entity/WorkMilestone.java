@@ -39,7 +39,7 @@ public class WorkMilestone {
 
     @Enumerated(EnumType.STRING)
     @Builder.Default
-    private Status status = Status.PENDING;
+    private Status status = Status.IN_PROGRESS;
 
     @OneToMany(
             mappedBy = "milestone",

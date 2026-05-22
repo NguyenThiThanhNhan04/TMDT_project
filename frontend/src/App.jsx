@@ -17,6 +17,7 @@ import AdminDashboardPage from './pages/AdminDashboardPage';
 import ProjectDetailPage from './pages/ProjectDetailPage';
 import ProjectDetailPageV2 from './pages/ProjectDetailPageV2';
 import DashboardContractorPage from './pages/DashboardContractorPage';
+import ProductionLogDetailPage from './pages/ProductionLogDetailPage';
 
 // Temporary components until I create them
 const Notifications = () => <div className="p-8">Notifications (Coming soon)</div>;
@@ -129,6 +130,12 @@ function App() {
         <Route path="/contractor/dashboard" element={
           <ProtectedRoute allowedRoles={['CONTRACTOR']}>
             <DashboardContractorPage />
+          </ProtectedRoute>
+        } />
+
+        <Route path="/production-log/:jobId" element={
+          <ProtectedRoute allowedRoles={['CONTRACTOR']}>
+            <ProductionLogDetailPage />
           </ProtectedRoute>
         } />
 
