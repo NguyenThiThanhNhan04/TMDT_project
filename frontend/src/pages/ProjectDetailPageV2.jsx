@@ -61,27 +61,43 @@ const ProjectDetailPageV2 = () => {
 
     const uploadImage = async (file) => {
         try {
-            const cloudName = import.meta.env.VITE_CLOUD_NAME;
-            const uploadPreset = import.meta.env.VITE_UPLOAD_PRESET;
+            const cloudName = 'dtufvt361';
+            const apiKey = '891517336858882';
+            const apiSecret = 'Sp6F1ZaE4r4dYMi5Lo-goe6TBMQ';
+            
+            const timestamp = Math.round((new Date).getTime() / 1000);
+            const signatureString = `timestamp=${timestamp}${apiSecret}`;
+            
+            const encoder = new TextEncoder();
+            const data = encoder.encode(signatureString);
+            const hashBuffer = await crypto.subtle.digest('SHA-1', data);
+            const hashArray = Array.from(new Uint8Array(hashBuffer));
+            const signature = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
 
-            const formData = new FormData();
-
-            formData.append('file', file);
-            formData.append('upload_preset', uploadPreset);
+            const uploadData = new FormData();
+            uploadData.append('file', file);
+            uploadData.append('api_key', apiKey);
+            uploadData.append('timestamp', timestamp);
+            uploadData.append('signature', signature);
 
             const response = await fetch(
                 `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`,
                 {
                     method: 'POST',
-                    body: formData,
+                    body: uploadData,
                 }
             );
 
-            const data = await response.json();
-
-            return data.secure_url;
+            const dataRes = await response.json();
+            if (!response.ok) {
+                console.error('Cloudinary API Error:', dataRes);
+                toast.error('Cloudinary từ chối ảnh: ' + (dataRes.error?.message || 'Không rõ nguyên nhân'));
+                return null;
+            }
+            return dataRes.secure_url;
         } catch (error) {
-            toast.error('Upload ảnh thất bại');
+            console.error('Lỗi Upload:', error);
+            toast.error('Upload ảnh thất bại: ' + error.message);
             return null;
         }
     };
@@ -274,6 +290,26 @@ const ProjectDetailPageV2 = () => {
                             <p className="text-gray-600 leading-7 whitespace-pre-line">
                                 {project.description}
                             </p>
+
+                            {project.imageUrls && project.imageUrls.length > 0 && (
+                                <div className="mt-8 border-t border-gray-100 pt-6">
+                                    <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
+                                        <ImageIcon size={20} className="text-[#1a4f3a]" />
+                                        Hình ảnh đính kèm ({project.imageUrls.length})
+                                    </h3>
+                                    <div className="flex flex-wrap gap-4">
+                                        {project.imageUrls.map((url, idx) => (
+                                            <a key={idx} href={url} target="_blank" rel="noreferrer">
+                                                <img 
+                                                    src={url} 
+                                                    alt={`Attachment ${idx}`} 
+                                                    className="w-32 h-32 md:w-48 md:h-48 object-cover rounded-2xl border border-gray-200 shadow-sm hover:shadow-md hover:border-[#1a4f3a] transition-all cursor-pointer" 
+                                                />
+                                            </a>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
                         </div>
 
                         <div className="w-full lg:w-72">

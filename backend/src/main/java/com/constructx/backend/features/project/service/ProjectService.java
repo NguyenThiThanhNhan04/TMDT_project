@@ -36,12 +36,8 @@ public class ProjectService {
     }
 
     public Project getProjectById(Long id) {
-        User user = getCurrentUser();
         Project project = projectRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy dự án"));
-        if (!project.getUser().getId().equals(user.getId())) {
-            throw new RuntimeException("Bạn không có quyền xem dự án này");
-        }
         return project;
     }
 
@@ -66,6 +62,8 @@ public class ProjectService {
                 .budgetMax(request.getBudgetMax())
                 .bidType(bidType)
                 .status(Project.Status.OPEN)
+                .imageUrls(request.getImageUrls())
+                .createdAt(java.time.LocalDateTime.now())
                 .build();
 
         return projectRepository.save(project);
