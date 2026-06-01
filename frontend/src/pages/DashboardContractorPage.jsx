@@ -5,277 +5,208 @@ import {
     Wallet,
     ClipboardList,
     CheckCircle2,
-    ChevronRight,
     Eye,
     CalendarDays,
-    PlusCircle
+    PlusCircle,
+    ArrowRight
 } from 'lucide-react';
 import api from '../services/api';
 import { useNavigate } from 'react-router-dom';
 
 const StatCard = ({ icon, label, value }) => (
-    <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm">
-        <div className="flex items-center gap-3 mb-4">
-            <div className="p-2 rounded-xl bg-gray-50 text-gray-600">
-                {icon}
-            </div>
-
-            <span className="text-xs font-medium text-gray-500 uppercase tracking-widest">
-                {label}
-            </span>
+    <div className="bg-white p-5 rounded-2xl border shadow-sm">
+        <div className="flex items-center gap-2 text-gray-500 text-xs uppercase mb-3">
+            {icon}
+            {label}
         </div>
-
-        <h3 className="text-3xl font-bold text-gray-800">
-            {value}
-        </h3>
+        <div className="text-2xl font-bold text-gray-800">{value}</div>
     </div>
 );
 
 const DashboardContractorPage = () => {
-
     const navigate = useNavigate();
-
     const [jobs, setJobs] = useState([]);
-
     const [wallet, setWallet] = useState(null);
-
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        fetchDashboardData();
+        fetchData();
     }, []);
-    const fetchDashboardData = async () => {
+
+    const fetchData = async () => {
         try {
-            const [jobsRes, walletRes] = await Promise.all([
+            const [j, w] = await Promise.all([
                 api.get('/contracts/jobs'),
                 api.get('/wallet')
             ]);
-            setJobs(jobsRes.data.data || []);
-            setWallet(walletRes.data.data);
-        } catch (error) {
-            console.error(error);
+            setJobs(j.data.data || []);
+            setWallet(w.data.data);
         } finally {
             setLoading(false);
         }
     };
 
-    const formatCurrency = (amount) => {
+    const format = (v) =>
+        v ? v.toLocaleString('vi-VN') + 'đ' : '0đ';
 
-        if (!amount) return '0đ';
-
-        return amount.toLocaleString('vi-VN') + 'đ';
+    const getStatusColor = (status) => {
+        switch (status) {
+            case 'IN_PROGRESS':
+                return 'bg-amber-50 text-amber-700';
+            case 'COMPLETED':
+                return 'bg-green-50 text-green-700';
+            default:
+                return 'bg-gray-50 text-gray-600';
+        }
     };
-
-    const activeJobs = jobs.filter(
-        job => job.status === 'IN_PROGRESS'
-    );
-
-    const completedJobs = jobs.filter(
-        job => job.status === 'COMPLETED'
-    );
 
     if (loading) {
         return (
-            <Layout title="Tổng quan nhà thầu">
-                <div className="flex justify-center py-20">
-                    <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-[#1a4f3a]"></div>
+            <Layout title="Dashboard">
+                <div className="h-64 flex items-center justify-center text-sm text-gray-400">
+                    Loading...
                 </div>
             </Layout>
         );
     }
 
     return (
-
-        <Layout title="Tổng quan nhà thầu">
+        <Layout title="Workspace">
 
             {/* STATS */}
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 mb-8">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
 
                 <StatCard
-                    icon={<TrendingUp size={20} />}
-                    label="Dự án đang thi công"
-                    value={activeJobs.length}
+                    icon={<TrendingUp size={14} />}
+                    label="Đang làm"
+                    value={jobs.filter(j => j.status === 'IN_PROGRESS').length}
                 />
 
                 <StatCard
-                    icon={<Wallet size={20} />}
-                    label="Thu nhập"
-                    value={formatCurrency(wallet?.balance)}
+                    icon={<Wallet size={14} />}
+                    label="Số dư"
+                    value={format(wallet?.balance)}
                 />
 
                 <StatCard
-                    icon={<ClipboardList size={20} />}
-                    label="Chờ giải ngân"
-                    value={formatCurrency(wallet?.lockedAmount)}
+                    icon={<ClipboardList size={14} />}
+                    label="Chờ nhận"
+                    value={format(wallet?.lockedAmount)}
                 />
 
                 <StatCard
-                    icon={<CheckCircle2 size={20} />}
+                    icon={<CheckCircle2 size={14} />}
                     label="Hoàn thành"
-                    value={completedJobs.length}
+                    value={jobs.filter(j => j.status === 'COMPLETED').length}
                 />
             </div>
 
             {/* JOB LIST */}
-            <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
+            <div className="bg-white border rounded-2xl overflow-hidden">
 
-                <div className="p-6 border-b border-gray-100 flex items-center justify-between">
-
-                    <div>
-                        <h2 className="text-xl font-bold text-gray-800">
-                            Dự án đã nhận
-                        </h2>
-
-                        <p className="text-sm text-gray-500 mt-1">
-                            Danh sách các dự án bạn đang phụ trách
-                        </p>
-                    </div>
+                <div className="p-5 border-b">
+                    <h2 className="font-bold text-base">Dự án của bạn</h2>
+                    <p className="text-xs text-gray-400">
+                        Workspace quản lý công việc
+                    </p>
                 </div>
 
                 {jobs.length === 0 ? (
-
-                    <div className="p-16 text-center">
-
-                        <div className="w-20 h-20 rounded-full bg-gray-50 flex items-center justify-center mx-auto mb-5">
-                            <ClipboardList
-                                size={32}
-                                className="text-gray-300"
-                            />
-                        </div>
-
-                        <h3 className="font-bold text-gray-700 text-lg">
-                            Chưa có dự án nào
-                        </h3>
-
-                        <p className="text-sm text-gray-400 mt-1">
-                            {/* Khi được khách hàng chọn bạn sẽ thấy tại đây */}
-                        </p>
+                    <div className="p-16 text-center text-gray-400 text-sm">
+                        Chưa có dự án nào
                     </div>
-
                 ) : (
+                    <div className="divide-y">
 
-                    <div className="divide-y divide-gray-100">
-
-                        {jobs.map((job) => (
-
+                        {jobs.map(job => (
                             <div
                                 key={job.jobId}
-                                className="p-6 hover:bg-gray-50 transition-all"
+                                className="p-5 hover:bg-gray-50 transition"
                             >
 
-                                <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-6">
+                                {/* HEADER */}
+                                <div className="flex justify-between items-start mb-3">
 
-                                    {/* LEFT */}
-                                    <div className="flex-1">
+                                    <div>
+                                        <span className={`text-xs px-3 py-1 rounded-full font-semibold ${getStatusColor(job.status)}`}>
+                                            {job.status}
+                                        </span>
 
-                                        <div className="flex items-start justify-between gap-4 mb-4">
-
-                                            <div>
-
-                                                <div className="flex items-center gap-3 mb-2">
-
-                                                    <span className={`
-                                                        px-3 py-1 rounded-full text-[11px] font-bold uppercase
-                                                        ${job.status === 'IN_PROGRESS'
-                                                            ? 'bg-amber-100 text-amber-700'
-                                                            : 'bg-green-100 text-green-700'
-                                                        }
-                                                    `}>
-                                                        {job.status}
-                                                    </span>
-
-                                                    <span className="text-xs text-gray-400">
-                                                        <CalendarDays size={13} className="inline mr-1" />
-                                                        {new Date(job.createdAt)
-                                                            .toLocaleDateString('vi-VN')}
-                                                    </span>
-                                                </div>
-
-                                                <h3 className="text-xl font-bold text-gray-800">
-                                                    {job.projectName}
-                                                </h3>
-                                            </div>
-                                        </div>
-
-                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-
-                                            <div>
-                                                <p className="text-xs text-gray-400 mb-1">
-                                                    Khách hàng
-                                                </p>
-
-                                                <p className="font-semibold text-gray-700">
-                                                    {job.customerName}
-                                                </p>
-                                            </div>
-
-                                            <div>
-                                                <p className="text-xs text-gray-400 mb-1">
-                                                    Danh mục
-                                                </p>
-
-                                                <p className="font-semibold text-gray-700">
-                                                    {job.category}
-                                                </p>
-                                            </div>
-
-                                            <div>
-                                                <p className="text-xs text-gray-400 mb-1">
-                                                    Giá trị công trình
-                                                </p>
-
-                                                <p className="font-bold text-[#1a4f3a]">
-                                                    {formatCurrency(job.agreedPrice)}
-                                                </p>
-                                            </div>
-                                        </div>
+                                        <h3 className="font-bold text-base mt-2">
+                                            {job.projectName}
+                                        </h3>
                                     </div>
 
-                                    {/* ACTIONS */}
-                                    <div className="flex flex-wrap gap-3">
+                                    <span className="text-xs text-gray-400 flex items-center gap-1">
+                                        <CalendarDays size={12} />
+                                        {new Date(job.createdAt).toLocaleDateString('vi-VN')}
+                                    </span>
 
-                                        {/* VIEW DETAIL */}
-                                        <button
-                                            onClick={() =>
-                                                navigate(`/contractor/jobs/${job.jobId}`)
-                                            }
-                                            className="h-11 px-5 rounded-2xl border border-gray-200 bg-white hover:bg-gray-50 text-sm font-semibold flex items-center gap-2"
-                                        >
-                                            <Eye size={18} />
-                                            Xem chi tiết
-                                        </button>
+                                </div>
 
-                                        {/* CREATE PLAN */}
-                                        {!job.hasPlan && (
-                                            <button
-                                                onClick={() =>
-                                                    navigate(`/contractor/jobs/${job.jobId}/plan`)
-                                                }
-                                                className="h-11 px-5 rounded-2xl bg-[#1a4f3a] hover:bg-[#153f2e] text-white text-sm font-semibold flex items-center gap-2 shadow-lg shadow-[#1a4f3a]/20"
-                                            >
-                                                <PlusCircle size={18} />
-                                                Tạo kế hoạch
-                                            </button>
-                                        )}
+                                {/* INFO */}
+                                <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 text-sm text-gray-600">
 
-                                        {/* UPDATE PROGRESS */}
-                                        {job.planApproved && (
-                                            <button
-                                                onClick={() =>
-                                                    navigate(`/contractor/jobs/${job.jobId}/progress`)
-                                                }
-                                                className="h-11 px-5 rounded-2xl bg-amber-500 hover:bg-amber-600 text-white text-sm font-semibold"
-                                            >
-                                                Cập nhật tiến độ
-                                            </button>
-                                        )}
+                                    <div>
+                                        <p className="text-xs text-gray-400">Khách hàng</p>
+                                        <p className="font-medium">{job.customerName}</p>
+                                    </div>
+
+                                    <div>
+                                        <p className="text-xs text-gray-400">Danh mục</p>
+                                        <p className="font-medium">{job.category}</p>
+                                    </div>
+
+                                    <div>
+                                        <p className="text-xs text-gray-400">Giá trị</p>
+                                        <p className="font-bold text-[#1a4f3a]">
+                                            {format(job.agreedPrice)}
+                                        </p>
                                     </div>
                                 </div>
+
+                                {/* ACTIONS */}
+                                <div className="flex gap-2 mt-4">
+
+                                    <button
+                                        onClick={() => navigate(`/contractor/jobs/${job.jobId}`)}
+                                        className="px-4 py-2 text-sm border rounded-xl flex items-center gap-1"
+                                    >
+                                        <Eye size={14} />
+                                        Chi tiết
+                                    </button>
+
+                                    {!job.hasPlan && (
+                                        <button
+                                            onClick={() =>
+                                                navigate(`/contractor/jobs/${job.jobId}/plan`)
+                                            }
+                                            className="px-4 py-2 text-sm bg-[#1a4f3a] text-white rounded-xl flex items-center gap-1"
+                                        >
+                                            <PlusCircle size={14} />
+                                            Kế hoạch
+                                        </button>
+                                    )}
+
+                                    {job.planApproved && (
+                                        <button
+                                            onClick={() =>
+                                                navigate(`/contractor/jobs/${job.jobId}/progress`)
+                                            }
+                                            className="px-4 py-2 text-sm bg-amber-500 text-white rounded-xl"
+                                        >
+                                            Tiến độ
+                                        </button>
+                                    )}
+
+                                </div>
+
                             </div>
                         ))}
                     </div>
                 )}
             </div>
+
         </Layout>
     );
 };

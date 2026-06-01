@@ -1,5 +1,6 @@
 package com.constructx.backend.features.project.controller;
 
+import com.constructx.backend.features.constructor.dto.ProjectDetailResponse;
 import com.constructx.backend.features.project.dto.ProjectRequest;
 import com.constructx.backend.shared.dto.ApiResponse;
 import com.constructx.backend.features.project.entity.Project;
@@ -53,5 +54,15 @@ public class ProjectController {
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage()));
         }
+    }
+    // api lấy thông tin chi tiết dự án và các báo giá
+    @GetMapping("/v2/{projectId}")
+    public ApiResponse<ProjectDetailResponse> getProjectDetail(
+            @PathVariable Long projectId
+    ) {
+
+        return ApiResponse.ok(
+                projectService.getProjectDetail(projectId)
+        );
     }
 }
