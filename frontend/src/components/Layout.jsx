@@ -36,6 +36,7 @@ const Sidebar = () => {
     { id: 'home', label: 'Trang chủ', icon: <Construction size={20} />, path: '/' },
     { id: 'dashboard', label: 'Bảng điều khiển', icon: <LayoutDashboard size={20} />, path: '/contractor/dashboard' },
     { id: 'marketplace', label: 'Tìm việc mới', icon: <PlusCircle size={20} />, path: '/projects/browse' },
+    // { id: 'bid', label: 'Gửi báo giá', icon: <PlusCircle size={20} />, path: '/projects/:id/bid' },
     { id: 'my-bids', label: 'Đấu thầu của tôi', icon: <History size={20} />, path: '/bids' },
     { id: 'production-log', label: 'Nhật ký thi công', icon: <Camera size={20} />, path: '/production-log' },
     { id: 'portfolio', label: 'Hồ sơ năng lực', icon: <Image size={20} />, path: '/portfolio' },
@@ -89,10 +90,9 @@ const Sidebar = () => {
             key={item.id}
             to={item.path}
             className={({ isActive }) =>
-              `flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all ${
-                isActive
-                  ? 'bg-white/15 text-white font-medium'
-                  : 'text-white/70 hover:bg-white/10 hover:text-white'
+              `flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all ${isActive
+                ? 'bg-white/15 text-white font-medium'
+                : 'text-white/70 hover:bg-white/10 hover:text-white'
               }`
             }
           >

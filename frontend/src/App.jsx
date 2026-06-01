@@ -19,10 +19,12 @@ import AdminWithdrawalsPage from './pages/AdminWithdrawalsPage';
 import AdminUsersPage from './pages/AdminUsersPage';
 import AdminSettingsPage from './pages/AdminSettingsPage';
 import ProjectDetailPage from './pages/ProjectDetailPage';
-import ProjectDetailPageV2 from './pages/ProjectDetailPageV2';
 import DashboardContractorPage from './pages/DashboardContractorPage';
 import ProductionLogDetailPage from './pages/ProductionLogDetailPage';
 import NotificationsPage from './pages/NotificationsPage';
+import ProjectDetailConstructorPage from './pages/ProjectDetailConstructorPage';
+import BidPage from './pages/BidPage';
+import CreatePlanPage from './pages/CreatePlanPage';
 
 // Temporary components until I create them
 // const Notifications = () => <div className="p-8">Notifications (Coming soon)</div>;
@@ -150,9 +152,9 @@ function App() {
           </ProtectedRoute>
         } />
         {/* contractor only */}
-        <Route path="/projectsv2/:id" element={
+        <Route path="/projects-constructor/:id" element={
           <ProtectedRoute allowedRoles={['CONTRACTOR']}>
-            <ProjectDetailPageV2 />
+            <ProjectDetailConstructorPage />
           </ProtectedRoute>
         } />
 
@@ -167,6 +169,17 @@ function App() {
             <ProductionLogDetailPage />
           </ProtectedRoute>
         } />
+        <Route path="/projects/:id/bid" element={
+          <ProtectedRoute allowedRoles={['CONTRACTOR']}>
+            <BidPage />
+          </ProtectedRoute>
+        } />
+        <Route path="/contractor/jobs/:jobId/plan" element={
+          <ProtectedRoute allowedRoles={['CONTRACTOR']}>
+            <CreatePlanPage />
+          </ProtectedRoute>
+        } />
+
 
         <Route path="*" element={<Navigate to="/" />} />
       </Routes>
