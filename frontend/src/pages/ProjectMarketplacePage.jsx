@@ -76,9 +76,18 @@ const ProjectMarketplacePage = () => {
           {projects.map((project) => (
             <div
               key={project.id}
-              className="bg-white rounded-3xl border border-gray-100 shadow-sm hover:shadow-md transition-all overflow-hidden group cursor-pointer"
+              className="bg-white rounded-3xl border border-gray-100 shadow-sm hover:shadow-md transition-all overflow-hidden group cursor-pointer flex flex-col"
             >
-              <div className="p-6">
+              {project.imageUrls && project.imageUrls.length > 0 && (
+                <div className="h-56 w-full overflow-hidden bg-gray-100 border-b border-gray-100">
+                  <img 
+                    src={project.imageUrls[0]} 
+                    alt={project.name} 
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                  />
+                </div>
+              )}
+              <div className="p-6 flex-1 flex flex-col">
                 <div className="flex justify-between items-start mb-4">
                   <span className="px-3 py-1 bg-[#e8f5ee] text-[#1a4f3a] text-[10px] font-bold uppercase rounded-full">
                     {project.category}
@@ -103,7 +112,7 @@ const ProjectMarketplacePage = () => {
                   </div>
                 </div>
 
-                <div className="flex items-center justify-between pt-4 border-t border-gray-50">
+                <div className="flex items-center justify-between pt-4 border-t border-gray-50 mt-auto">
                   <div className="flex items-center gap-2">
                     <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-xs font-bold text-gray-500">
                       {project.customerName?.charAt(0) || 'C'}

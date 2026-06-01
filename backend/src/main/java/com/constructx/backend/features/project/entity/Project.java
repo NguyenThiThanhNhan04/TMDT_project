@@ -53,6 +53,11 @@ public class Project {
 
     private LocalDateTime createdAt;
 
+    @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(name = "project_images", joinColumns = @JoinColumn(name = "project_id"))
+    @Column(name = "image_url", columnDefinition = "TEXT")
+    private java.util.List<String> imageUrls;
+
     @ManyToOne
     @JoinColumn(name = "user_id")
     private User user;

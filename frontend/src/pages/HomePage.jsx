@@ -90,9 +90,18 @@ const HomePage = () => {
               <div 
                 key={project.id} 
                 onClick={() => handleProjectClick(project.id)}
-                className="bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-all group overflow-hidden cursor-pointer"
+                className="bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-all group overflow-hidden cursor-pointer flex flex-col"
               >
-                <div className="p-6">
+                {project.imageUrls && project.imageUrls.length > 0 && (
+                  <div className="h-56 w-full overflow-hidden bg-gray-50 border-b border-gray-100">
+                    <img 
+                      src={project.imageUrls[0]} 
+                      alt={project.name} 
+                      className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-500"
+                    />
+                  </div>
+                )}
+                <div className="p-6 flex-1 flex flex-col">
                   <div className="flex justify-between items-start mb-4">
                     <span className="badge badge-green text-[10px]">Đang tuyển</span>
                     <span className="text-xs font-bold text-gray-400 flex items-center gap-1">
@@ -113,7 +122,7 @@ const HomePage = () => {
                     {project.description || 'Không có mô tả chi tiết.'}
                   </p>
 
-                  <div className="flex items-center justify-between pt-4 border-t border-gray-50">
+                  <div className="flex items-center justify-between pt-4 border-t border-gray-50 mt-auto">
                     <div>
                       <p className="text-[10px] uppercase tracking-widest text-gray-400 font-bold">Ngân sách</p>
                       <p className="text-sm font-bold text-primary">

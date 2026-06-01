@@ -10,7 +10,8 @@ import {
   Calendar,
   Tag,
   User as UserIcon,
-  MessageSquare
+  MessageSquare,
+  Image as ImageIcon
 } from 'lucide-react';
 import api from '../services/api';
 import { toast } from 'react-hot-toast';
@@ -32,7 +33,9 @@ const ProjectDetailPage = () => {
       const response = await api.get(`/projects/${id}`);
       setProject(response.data.data);
     } catch (error) {
-      toast.error('Lỗi khi tải thông tin dự án');
+      console.error(error);
+      const errorMsg = error.response?.data?.message || 'Lỗi khi tải thông tin dự án';
+      toast.error(errorMsg);
       navigate('/dashboard');
     } finally {
       setLoading(false);
@@ -140,6 +143,25 @@ const ProjectDetailPage = () => {
                 {project.category}
               </div>
             </div>
+
+            {project.imageUrls && project.imageUrls.length > 0 && (
+                <div className="mb-10">
+                    <h2 className="text-lg font-bold font-display text-gray-900 mb-4 flex items-center gap-2">
+                        <ImageIcon size={20} className="text-primary" /> Hình ảnh đính kèm ({project.imageUrls.length})
+                    </h2>
+                    <div className="flex flex-wrap gap-4">
+                        {project.imageUrls.map((url, idx) => (
+                            <a key={idx} href={url} target="_blank" rel="noreferrer">
+                                <img 
+                                    src={url} 
+                                    alt={`Attachment ${idx}`} 
+                                    className="w-32 h-32 md:w-48 md:h-48 object-cover rounded-2xl border border-gray-200 shadow-sm hover:shadow-md hover:border-primary transition-all cursor-pointer" 
+                                />
+                            </a>
+                        ))}
+                    </div>
+                </div>
+            )}
 
             <div className="mb-10">
               <h2 className="text-lg font-bold font-display text-gray-900 mb-4 flex items-center gap-2">

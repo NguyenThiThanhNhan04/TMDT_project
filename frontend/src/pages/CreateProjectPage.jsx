@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import Layout from '../components/Layout';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
@@ -12,11 +12,14 @@ import {
   ChevronLeft,
   Upload,
   X,
-  File
+  File,
+  LayoutTemplate
 } from 'lucide-react';
 
 const CreateProjectPage = () => {
-  const [step, setStep] = useState(1);
+  const [step, setStep] = useState(0);
+  const [templates, setTemplates] = useState([]);
+  const [loadingTemplates, setLoadingTemplates] = useState(true);
   const [formData, setFormData] = useState({
     name: '',
     address: '',
@@ -26,12 +29,73 @@ const CreateProjectPage = () => {
     description: '',
     budgetMin: 50000000,
     budgetMax: 100000000,
-    bidType: 'OPEN'
+    bidType: 'OPEN',
+    imageUrls: []
   });
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [loading, setLoading] = useState(false);
   const fileInputRef = useRef(null);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const fetchTemplates = async () => {
+      try {
+        const response = await api.get('/project-templates');
+        if (response.data && response.data.data) {
+          setTemplates(response.data.data);
+        }
+      } catch (error) {
+        console.error('Lỗi khi lấy danh sách mẫu dự án:', error);
+      } finally {
+        setLoadingTemplates(false);
+      }
+    };
+    fetchTemplates();
+  }, []);
+
+  const uploadImageToCloudinary = async (file) => {
+    try {
+      const cloudName = 'dtufvt361';
+      const apiKey = '891517336858882';
+      const apiSecret = 'Sp6F1ZaE4r4dYMi5Lo-goe6TBMQ';
+      
+      const timestamp = Math.round((new Date).getTime() / 1000);
+      const signatureString = `timestamp=${timestamp}${apiSecret}`;
+      
+      // Mã hoá SHA-1 cho signature
+      const encoder = new TextEncoder();
+      const data = encoder.encode(signatureString);
+      const hashBuffer = await crypto.subtle.digest('SHA-1', data);
+      const hashArray = Array.from(new Uint8Array(hashBuffer));
+      const signature = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+
+      const uploadData = new FormData();
+      uploadData.append('file', file);
+      uploadData.append('api_key', apiKey);
+      uploadData.append('timestamp', timestamp);
+      uploadData.append('signature', signature);
+
+      const response = await fetch(
+        `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`,
+        {
+          method: 'POST',
+          body: uploadData,
+        }
+      );
+
+      const dataRes = await response.json();
+      if (!response.ok) {
+        console.error('Cloudinary API Error:', dataRes);
+        toast.error('Cloudinary từ chối ảnh: ' + (dataRes.error?.message || 'Không rõ nguyên nhân'));
+        return null;
+      }
+      return dataRes.secure_url;
+    } catch (error) {
+      console.error('Upload ảnh thất bại (Lỗi Code/Mạng):', error);
+      toast.error('Lỗi khi tải ảnh lên: ' + error.message);
+      return null;
+    }
+  };
 
   const handleFileSelect = (e) => {
     const files = Array.from(e.target.files);
@@ -45,13 +109,48 @@ const CreateProjectPage = () => {
   const handleSubmit = async () => {
     setLoading(true);
     try {
-      // Lưu ý: Trong thực tế, bạn sẽ dùng FormData để upload cả file
-      // Ở đây tôi đang gửi JSON thông tin dự án trước
-      await api.post('/projects', formData);
+      let uploadedImageUrls = [];
+      
+      if (selectedFiles.length > 0) {
+        toast.loading('Đang upload ảnh đính kèm...', { id: 'upload-project-images' });
+        
+        // Upload tuần tự từng ảnh lên Cloudinary
+        for (const file of selectedFiles) {
+          const url = await uploadImageToCloudinary(file);
+          if (url) {
+            uploadedImageUrls.push(url);
+          }
+        }
+        
+        toast.dismiss('upload-project-images');
+      }
+
+      // Ghép địa chỉ đầy đủ từ các trường con
+      const fullAddress = [formData.street, formData.district, formData.city]
+        .filter(Boolean)
+        .join(', ');
+
+      // Chỉ gửi các trường mà Backend ProjectRequest hỗ trợ
+      const projectData = {
+        name: formData.name,
+        category: formData.category || null,
+        area: formData.area ? Number(formData.area) : null,
+        style: formData.style || null,
+        address: fullAddress || formData.address || null,
+        description: formData.description || null,
+        budgetMin: formData.budgetMin ? Number(formData.budgetMin) : null,
+        budgetMax: formData.budgetMax ? Number(formData.budgetMax) : null,
+        bidType: formData.bidType || 'OPEN',
+        imageUrls: [...(formData.imageUrls || []), ...uploadedImageUrls]
+      };
+
+      await api.post('/projects', projectData);
       toast.success('Đăng dự án thành công!');
       navigate('/projects');
     } catch (error) {
-      toast.error('Lỗi khi tạo dự án');
+      console.error('Lỗi khi submit:', error);
+      const errMsg = error.response?.data?.message || error.message || 'Lỗi khi tạo dự án';
+      toast.error(errMsg);
     } finally {
       setLoading(false);
     }
@@ -63,31 +162,98 @@ const CreateProjectPage = () => {
     { id: 3, label: 'Chi tiết & Tài liệu', icon: <FileText size={16} /> },
   ];
 
+  const handleSelectTemplate = (template) => {
+    setFormData({
+      ...formData,
+      name: template.title,
+      description: template.description,
+      budgetMin: template.budgetMin,
+      budgetMax: template.budgetMax,
+      imageUrls: template.imageUrl ? [template.imageUrl] : []
+    });
+    setStep(1);
+  };
+
   return (
     <Layout title="Tạo dự án mới">
       <div className="max-w-3xl mx-auto">
         {/* Step Indicator */}
-        <div className="flex items-center justify-between mb-8 px-4">
-          {steps.map((s, index) => (
-            <React.Fragment key={s.id}>
-              <div className="flex flex-col items-center gap-2">
-                <div className={`w-10 h-10 rounded-full flex items-center justify-center border-2 transition-all ${
-                  step >= s.id ? 'bg-[#1a4f3a] border-[#1a4f3a] text-white' : 'bg-white border-gray-200 text-gray-300'
-                }`}>
-                  {s.icon}
+        {step > 0 && (
+          <div className="flex items-center justify-between mb-8 px-4">
+            {steps.map((s, index) => (
+              <React.Fragment key={s.id}>
+                <div className="flex flex-col items-center gap-2">
+                  <div className={`w-10 h-10 rounded-full flex items-center justify-center border-2 transition-all ${
+                    step >= s.id ? 'bg-[#1a4f3a] border-[#1a4f3a] text-white' : 'bg-white border-gray-200 text-gray-300'
+                  }`}>
+                    {s.icon}
+                  </div>
+                  <span className={`text-[10px] font-bold uppercase tracking-widest ${
+                    step >= s.id ? 'text-[#1a4f3a]' : 'text-gray-300'
+                  }`}>{s.label}</span>
                 </div>
-                <span className={`text-[10px] font-bold uppercase tracking-widest ${
-                  step >= s.id ? 'text-[#1a4f3a]' : 'text-gray-300'
-                }`}>{s.label}</span>
-              </div>
-              {index < steps.length - 1 && (
-                <div className={`flex-1 h-0.5 mx-4 ${step > s.id ? 'bg-[#1a4f3a]' : 'bg-gray-200'}`}></div>
-              )}
-            </React.Fragment>
-          ))}
-        </div>
+                {index < steps.length - 1 && (
+                  <div className={`flex-1 h-0.5 mx-4 ${step > s.id ? 'bg-[#1a4f3a]' : 'bg-gray-200'}`}></div>
+                )}
+              </React.Fragment>
+            ))}
+          </div>
+        )}
 
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 mb-6">
+          {step === 0 && (
+            <div className="space-y-6">
+              <div className="text-center mb-8">
+                <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary/10 text-primary mb-4">
+                  <LayoutTemplate size={32} />
+                </div>
+                <h2 className="text-2xl font-bold text-gray-800 mb-2">Bắt đầu dự án của bạn</h2>
+                <p className="text-gray-500 text-sm">Chọn một mẫu có sẵn để điền nhanh thông tin hoặc tự tạo dự án mới từ đầu.</p>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+                {loadingTemplates ? (
+                  <div className="col-span-3 text-center py-10 text-gray-400">Đang tải các mẫu dự án...</div>
+                ) : (
+                  templates.map((template) => (
+                    <div 
+                      key={template.id}
+                      onClick={() => handleSelectTemplate(template)}
+                      className="border border-gray-200 rounded-xl hover:border-primary hover:shadow-md cursor-pointer transition-all bg-white hover:bg-gray-50 group overflow-hidden flex flex-col"
+                    >
+                      {template.imageUrl && (
+                        <div className="h-40 w-full overflow-hidden bg-gray-100">
+                          <img 
+                            src={template.imageUrl} 
+                            alt={template.title} 
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                          />
+                        </div>
+                      )}
+                      <div className="p-5 flex-1 flex flex-col">
+                        <h3 className="font-bold text-gray-800 mb-2 group-hover:text-primary transition-colors">{template.title}</h3>
+                        <p className="text-xs text-gray-500 mb-4 line-clamp-3 flex-1">{template.description}</p>
+                        <div className="text-xs font-semibold text-gray-700 bg-gray-50 border border-gray-100 px-3 py-2 rounded-lg inline-block w-fit mt-auto">
+                          {(template.budgetMin / 1000000).toLocaleString('vi-VN')} - {(template.budgetMax / 1000000).toLocaleString('vi-VN')} Triệu VNĐ
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+
+              <div className="text-center">
+                <p className="text-sm text-gray-500 mb-4">Hoặc</p>
+                <button 
+                  onClick={() => setStep(1)}
+                  className="btn bg-white border-2 border-gray-200 text-gray-700 hover:border-primary hover:text-primary px-8 py-3"
+                >
+                  Tự nhập thông tin dự án mới
+                </button>
+              </div>
+            </div>
+          )}
+
           {step === 1 && (
             <div className="space-y-6">
               <div>
@@ -227,32 +393,33 @@ const CreateProjectPage = () => {
           )}
         </div>
 
-        <div className="flex items-center justify-between px-4">
-          <button 
-            onClick={() => setStep(s => s - 1)}
-            disabled={step === 1}
-            className={`flex items-center gap-2 text-sm font-bold ${step === 1 ? 'text-gray-300' : 'text-gray-500 hover:text-gray-800'}`}
-          >
-            <ChevronLeft size={18} /> Quay lại
-          </button>
-          
-          {step < 3 ? (
+        {step > 0 && (
+          <div className="flex items-center justify-between px-4">
             <button 
-              onClick={() => setStep(s => s + 1)}
-              className="btn btn-primary px-8 py-3 flex items-center gap-2 shadow-lg shadow-[#1a4f3a]/20"
+              onClick={() => setStep(s => s - 1)}
+              className="flex items-center gap-2 text-sm font-bold text-gray-500 hover:text-gray-800"
             >
-              Tiếp theo <ChevronRight size={18} />
+              <ChevronLeft size={18} /> Quay lại
             </button>
-          ) : (
-            <button 
-              onClick={handleSubmit}
-              disabled={loading}
-              className="btn btn-primary px-10 py-3 shadow-lg shadow-[#1a4f3a]/20"
-            >
-              {loading ? 'Đang đăng bài...' : 'Đăng dự án ngay'}
-            </button>
-          )}
-        </div>
+            
+            {step < 3 ? (
+              <button 
+                onClick={() => setStep(s => s + 1)}
+                className="btn btn-primary px-8 py-3 flex items-center gap-2 shadow-lg shadow-[#1a4f3a]/20"
+              >
+                Tiếp theo <ChevronRight size={18} />
+              </button>
+            ) : (
+              <button 
+                onClick={handleSubmit}
+                disabled={loading}
+                className="btn btn-primary px-10 py-3 shadow-lg shadow-[#1a4f3a]/20"
+              >
+                {loading ? 'Đang đăng bài...' : 'Đăng dự án ngay'}
+              </button>
+            )}
+          </div>
+        )}
       </div>
     </Layout>
   );
