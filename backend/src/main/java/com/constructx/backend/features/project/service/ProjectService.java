@@ -109,6 +109,7 @@ public class ProjectService {
                 .ownerName(project.getUser().getFullName())
                 .ownerPhone(project.getUser().getPhoneNumber())
                 .createdAt(project.getCreatedAt())
+                .imageUrls(project.getImageUrls())
                 .build();
 
         return ProjectDetailResponse.builder()

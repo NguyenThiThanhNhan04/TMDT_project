@@ -24,17 +24,23 @@ public interface ContractJobRepository extends JpaRepository<ContractJob, Long> 
             @Param("email") String email
     );
 
+    // Lấy các job đã hoàn thành của contractor
     @Query("""
     SELECT DISTINCT cj
     FROM ContractJob cj
     JOIN FETCH cj.project p
-    JOIN FETCH cj.customer customer
+    LEFT JOIN FETCH p.imageUrls
+    JOIN FETCH cj.customer c
     JOIN FETCH cj.contractor contractor
-    LEFT JOIN FETCH cj.workPlan wp
-    LEFT JOIN FETCH wp.milestones m
-    WHERE cj.id = :jobId
+    WHERE contractor.email = :email
+      AND cj.status = 'COMPLETED'
+    ORDER BY cj.completedAt DESC
     """)
-    Optional<ContractJob> findJobDetail(
-            @Param("jobId") Long jobId
+    List<ContractJob> findCompletedContractorJobs(
+            @Param("email") String email
     );
+//    Optional<ContractJob> findJobDetail(
+//            @Param("jobId") Long jobId
+//    );
+    Optional<ContractJob> findById(Long id);
 }
