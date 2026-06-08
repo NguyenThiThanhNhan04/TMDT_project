@@ -40,7 +40,10 @@ public class ProjectService {
     }
 
     public List<Project> getAllOpenProjects() {
-        return projectRepository.findByStatusOrderByCreatedAtDesc(Project.Status.OPEN);
+        return projectRepository.findByStatusOrderByCreatedAtDesc(Project.Status.OPEN)
+                .stream()
+                .filter(project -> project.getApprovalStatus() == Project.ApprovalStatus.APPROVED)
+                .toList();
     }
 
     public Project getProjectById(Long id) {
@@ -69,7 +72,8 @@ public class ProjectService {
                 .budgetMin(request.getBudgetMin())
                 .budgetMax(request.getBudgetMax())
                 .bidType(bidType)
-                .status(Project.Status.OPEN)
+                .status(Project.Status.DRAFT)
+                .approvalStatus(Project.ApprovalStatus.PENDING)
                 .imageUrls(request.getImageUrls())
                 .createdAt(java.time.LocalDateTime.now())
                 .build();
@@ -105,8 +109,10 @@ public class ProjectService {
                 .budgetMin(project.getBudgetMin())
                 .budgetMax(project.getBudgetMax())
                 .bidType(project.getBidType().name())
+                .approvalStatus(project.getApprovalStatus() == null ? null : project.getApprovalStatus().name())
                 .status(project.getStatus().name())
                 .ownerName(project.getUser().getFullName())
+                .ownerEmail(project.getUser().getEmail())
                 .ownerPhone(project.getUser().getPhoneNumber())
                 .createdAt(project.getCreatedAt())
                 .imageUrls(project.getImageUrls())

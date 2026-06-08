@@ -14,6 +14,7 @@ import ProjectMarketplacePage from './pages/ProjectMarketplacePage';
 import ProductionLogPage from './pages/ProductionLogPage';
 import PortfolioPage from './pages/PortfolioPage';
 import AdminProjectsPage from './pages/AdminProjectsPage';
+import AdminProjectMonitorPage from './pages/AdminProjectMonitorPage';
 import AdminDisputesPage from './pages/AdminDisputesPage';
 import AdminWithdrawalsPage from './pages/AdminWithdrawalsPage';
 import AdminUsersPage from './pages/AdminUsersPage';
@@ -114,6 +115,12 @@ function App() {
           </ProtectedRoute>
         } />
 
+        <Route path="/admin/projects-monitor" element={
+          <ProtectedRoute allowedRoles={['ADMIN']}>
+            <AdminProjectMonitorPage />
+          </ProtectedRoute>
+        } />
+
         <Route path="/admin/disputes" element={
           <ProtectedRoute allowedRoles={['ADMIN']}>
             <AdminDisputesPage />
@@ -125,7 +132,17 @@ function App() {
             <AdminUsersPage />
           </ProtectedRoute>
         } />
+        <Route path="/admin/contractors" element={
+          <ProtectedRoute allowedRoles={['ADMIN']}>
+            <AdminUsersPage />
+          </ProtectedRoute>
+        } />
         <Route path="/admin/AdminWithdrawalsPage" element={
+          <ProtectedRoute allowedRoles={['ADMIN']}>
+            <AdminWithdrawalsPage />
+          </ProtectedRoute>
+        } />
+        <Route path="/admin/withdrawals" element={
           <ProtectedRoute allowedRoles={['ADMIN']}>
             <AdminWithdrawalsPage />
           </ProtectedRoute>

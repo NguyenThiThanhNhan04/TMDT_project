@@ -288,7 +288,7 @@ const ProjectDetailConstructorPage = () => {
                                 </div>
                             </div>
 
-                            {project.status === 'OPEN' && (
+                            {project.status === 'OPEN' && project.approvalStatus === 'APPROVED' && (
                                 <button
                                     onClick={() => navigate(`/projects/${id}/bid`)}
                                     className="w-full bg-[#1a4f3a] text-white text-sm py-2.5 rounded-xl font-semibold hover:bg-[#143d2d] transition-colors flex items-center justify-center gap-2"
@@ -297,7 +297,7 @@ const ProjectDetailConstructorPage = () => {
                                 </button>
                             )}
 
-                            {project.status !== 'OPEN' && (
+                            {(project.status !== 'OPEN' || project.approvalStatus !== 'APPROVED') && (
                                 <div className="w-full bg-gray-100 text-gray-500 text-sm py-2.5 rounded-xl font-medium text-center">
                                     Đã đóng nhận báo giá
                                 </div>

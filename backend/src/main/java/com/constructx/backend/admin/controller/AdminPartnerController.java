@@ -1,6 +1,7 @@
 package com.constructx.backend.admin.controller;
 
 import com.constructx.backend.admin.dto.response.AdminPartnerResponse;
+import com.constructx.backend.admin.dto.request.AdminPartnerDecisionRequest;
 import com.constructx.backend.admin.service.AdminPartnerService;
 
 import com.constructx.backend.shared.dto.ApiResponse;
@@ -30,7 +31,10 @@ public class AdminPartnerController {
     }
 
     @PostMapping("/{id}/reject")
-    public ResponseEntity<ApiResponse<AdminPartnerResponse>> rejectPartner(@PathVariable Long id) {
-        return ResponseEntity.ok(ApiResponse.ok("Từ chối đối tác thành công", adminPartnerService.rejectPartner(id)));
+    public ResponseEntity<ApiResponse<AdminPartnerResponse>> rejectPartner(
+            @PathVariable Long id,
+            @RequestBody(required = false) AdminPartnerDecisionRequest request
+    ) {
+        return ResponseEntity.ok(ApiResponse.ok("Từ chối đối tác thành công", adminPartnerService.rejectPartner(id, request)));
     }
 }

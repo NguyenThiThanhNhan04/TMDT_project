@@ -5,7 +5,6 @@ import {
   PlusCircle,
   Wallet,
   Bell,
-  MessageCircle,
   History,
   LogOut,
   Construction,
@@ -15,6 +14,8 @@ import {
   Camera,
   Settings,
   ClipboardCheck,
+  UserCheck,
+  Activity,
   CheckCircle2,
 } from 'lucide-react';
 import useAuthStore from '../store/useAuthStore';
@@ -37,7 +38,6 @@ const Sidebar = () => {
     { id: 'home', label: 'Trang chủ', icon: <Construction size={20} />, path: '/' },
     { id: 'dashboard', label: 'Bảng điều khiển', icon: <LayoutDashboard size={20} />, path: '/contractor/dashboard' },
     { id: 'marketplace', label: 'Tìm việc mới', icon: <PlusCircle size={20} />, path: '/projects/browse' },
-    // { id: 'bid', label: 'Gửi báo giá', icon: <PlusCircle size={20} />, path: '/projects/:id/bid' },
     { id: 'my-bids', label: 'Đấu thầu của tôi', icon: <History size={20} />, path: '/bids' },
     { id: 'completed-jobs', label: 'Việc đã hoàn thành', icon: <CheckCircle2 size={20} />, path: '/contractor/completed-jobs' },
     { id: 'production-log', label: 'Nhật ký thi công', icon: <Camera size={20} />, path: '/production-log' },
@@ -48,10 +48,12 @@ const Sidebar = () => {
 
   const adminNav = [
     { id: 'admin-dashboard', label: 'Tổng quan hệ thống', icon: <LayoutDashboard size={20} />, path: '/dashboard' },
+    { id: 'user-management', label: 'Quản lý tài khoản', icon: <UserIcon size={20} />, path: '/admin/users' },
     { id: 'admin-projects', label: 'Duyệt dự án', icon: <ClipboardCheck size={20} />, path: '/admin/projects' },
-    { id: 'user-management', label: 'Phê duyệt đối tác', icon: <UserIcon size={20} />, path: '/admin/users' },
-    { id: 'disputes', label: 'Tranh chấp', icon: <Shield size={20} />, path: '/admin/disputes' },
-    { id: 'allowances', label: 'Duyệt tiền', icon: <Shield size={20} />, path: '/admin/AdminWithdrawalsPage' },
+    { id: 'contractor-review', label: 'Duyệt nhà thầu', icon: <UserCheck size={20} />, path: '/admin/contractors' },
+    { id: 'project-monitor', label: 'Giám sát dự án', icon: <Activity size={20} />, path: '/admin/projects-monitor' },
+    { id: 'disputes', label: 'Xử lý tranh chấp', icon: <Shield size={20} />, path: '/admin/disputes' },
+    { id: 'allowances', label: 'Duyệt tiền', icon: <Shield size={20} />, path: '/admin/withdrawals' },
     { id: 'settings', label: 'Cấu hình hệ thống', icon: <Settings size={20} />, path: '/admin/settings' },
     { id: 'profile', label: 'Cài đặt tài khoản', icon: <UserIcon size={20} />, path: '/profile' },
     { id: 'notifications', label: 'Thông báo', icon: <Bell size={20} />, path: '/notifications' },

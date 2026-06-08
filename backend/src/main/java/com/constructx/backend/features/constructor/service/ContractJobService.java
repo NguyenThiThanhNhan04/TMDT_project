@@ -68,7 +68,7 @@ public class ContractJobService {
         bidRepository.rejectOtherBids(projectId, bidId);
 
         // update project
-        project.setStatus(Project.Status.CLOSED);
+        project.setStatus(Project.Status.IN_PROGRESS);
 
         // tạo contract job
         com.constructx.backend.features.constructor.entity.ContractJob contractJob = ContractJob.builder()
