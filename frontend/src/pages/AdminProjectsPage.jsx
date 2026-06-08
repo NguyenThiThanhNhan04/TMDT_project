@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import Layout from '../components/Layout';
 import {
   Search,
@@ -9,43 +9,60 @@ import {
   DollarSign,
   MapPin,
   User,
-  Clock
+  Clock,
+  ClipboardList,
+  Activity,
 } from 'lucide-react';
 import api from '../services/api';
 import { toast } from 'react-hot-toast';
 import { Link } from 'react-router-dom';
 
-const FILTERS = [
+const REVIEW_FILTERS = [
   { value: 'PENDING', label: 'Chờ duyệt' },
   { value: 'APPROVED', label: 'Đã duyệt' },
   { value: 'REJECTED', label: 'Từ chối' },
   { value: 'all', label: 'Tất cả' },
 ];
 
+const MONITOR_FILTERS = [
+  { value: 'OPEN', label: 'Đang mở' },
+  { value: 'IN_PROGRESS', label: 'Đang thi công' },
+  { value: 'COMPLETED', label: 'Hoàn thành' },
+  { value: 'CANCELLED', label: 'Đã hủy' },
+  { value: 'all', label: 'Tất cả' },
+];
+
 const AdminProjectsPage = () => {
+  const [view, setView] = useState('review');
   const [projects, setProjects] = useState([]);
-  const [filteredProjects, setFilteredProjects] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [filter, setFilter] = useState('PENDING');
+  const [statusFilter, setStatusFilter] = useState('PENDING');
   const [selectedProject, setSelectedProject] = useState(null);
   const [showModal, setShowModal] = useState(false);
   const [reason, setReason] = useState('');
-  const [action, setAction] = useState('');
+  const [action, setAction] = useState('approve');
+
+  useEffect(() => {
+    const defaultFilter = view === 'review' ? 'PENDING' : 'all';
+    setStatusFilter(defaultFilter);
+  }, [view]);
 
   useEffect(() => {
     fetchProjects();
-  }, [filter]);
-
-  useEffect(() => {
-    filterProjects();
-  }, [projects, searchTerm]);
+  }, [view, statusFilter]);
 
   const fetchProjects = async () => {
     setLoading(true);
 
     try {
-      const response = await api.get(`/admin/projects?status=${filter}`);
+      const response = await api.get('/admin/projects', {
+        params: {
+          view,
+          status: statusFilter,
+        },
+      });
+
       setProjects(response.data.data || []);
     } catch (error) {
       console.error('Error fetching projects:', error);
@@ -55,22 +72,43 @@ const AdminProjectsPage = () => {
     }
   };
 
-  const filterProjects = () => {
-    let result = projects || [];
-
-    if (searchTerm.trim()) {
-      const term = searchTerm.trim().toLowerCase();
-
-      result = result.filter((project) =>
-        project.name?.toLowerCase().includes(term) ||
-        project.customerName?.toLowerCase().includes(term) ||
-        project.customerEmail?.toLowerCase().includes(term) ||
-        `${project.id}`.includes(term)
-      );
+  const filteredProjects = useMemo(() => {
+    if (!searchTerm.trim()) {
+      return projects;
     }
 
-    setFilteredProjects(result);
-  };
+    const term = searchTerm.trim().toLowerCase();
+
+    return projects.filter((project) =>
+      [
+        project.name,
+        project.customerName,
+        project.customerEmail,
+        project.address,
+        project.category,
+        `${project.id}`,
+      ]
+        .filter(Boolean)
+        .some((value) => value.toLowerCase().includes(term))
+    );
+  }, [projects, searchTerm]);
+
+  const summary = useMemo(() => {
+    if (view === 'monitor') {
+      return {
+        OPEN: projects.filter((p) => p.status === 'OPEN').length,
+        IN_PROGRESS: projects.filter((p) => p.status === 'IN_PROGRESS').length,
+        COMPLETED: projects.filter((p) => p.status === 'COMPLETED').length,
+        CANCELLED: projects.filter((p) => p.status === 'CANCELLED').length,
+      };
+    }
+
+    return {
+      PENDING: projects.filter((p) => p.approvalStatus === 'PENDING').length,
+      APPROVED: projects.filter((p) => p.approvalStatus === 'APPROVED').length,
+      REJECTED: projects.filter((p) => p.approvalStatus === 'REJECTED').length,
+    };
+  }, [projects, view]);
 
   const openReviewModal = (project, reviewAction) => {
     setSelectedProject(project);
@@ -82,19 +120,22 @@ const AdminProjectsPage = () => {
   const handleReview = async () => {
     if (!selectedProject) return;
 
-    if (!reason.trim()) {
-      toast.error('Vui lòng nhập ghi chú xử lý');
+    if (action === 'reject' && !reason.trim()) {
+      toast.error('Vui lòng nhập lý do từ chối');
       return;
     }
 
-    const endpoint = action === 'approve' ? 'approve' : 'reject';
-
     try {
-      await api.post(`/admin/projects/${selectedProject.id}/${endpoint}`, {
-        reason: reason.trim(),
-      });
+      await api.post(
+        `/admin/projects/${selectedProject.id}/${action}`,
+        action === 'reject' || reason.trim()
+          ? { reason: reason.trim() || undefined }
+          : {}
+      );
 
-      toast.success(action === 'approve' ? 'Dự án đã được duyệt' : 'Dự án đã bị từ chối');
+      toast.success(
+        action === 'approve' ? 'Dự án đã được duyệt' : 'Dự án đã bị từ chối'
+      );
       setShowModal(false);
       fetchProjects();
     } catch (error) {
@@ -122,44 +163,95 @@ const AdminProjectsPage = () => {
     return 'bg-gray-100 text-gray-700';
   };
 
-  const summary = {
-    pending: projects.filter((p) => p.approvalStatus === 'PENDING').length,
-    approved: projects.filter((p) => p.approvalStatus === 'APPROVED').length,
-    rejected: projects.filter((p) => p.approvalStatus === 'REJECTED').length,
+  const getProjectStatusLabel = (status) => {
+    if (status === 'DRAFT') return 'Chờ duyệt';
+    if (status === 'OPEN') return 'Đang mở';
+    if (status === 'IN_PROGRESS') return 'Đang thi công';
+    if (status === 'COMPLETED') return 'Hoàn thành';
+    if (status === 'CANCELLED') return 'Đã hủy';
+    return status || 'Không rõ';
   };
+
+  const getProjectStatusBadge = (status) => {
+    if (status === 'DRAFT') return 'bg-yellow-100 text-yellow-700';
+    if (status === 'OPEN') return 'bg-blue-100 text-blue-700';
+    if (status === 'IN_PROGRESS') return 'bg-amber-100 text-amber-700';
+    if (status === 'COMPLETED') return 'bg-green-100 text-green-700';
+    if (status === 'CANCELLED') return 'bg-red-100 text-red-700';
+    return 'bg-gray-100 text-gray-700';
+  };
+
+  const filterOptions = view === 'review' ? REVIEW_FILTERS : MONITOR_FILTERS;
+  const title = view === 'review' ? 'Duyệt yêu cầu mới' : 'Giám sát dự án';
+  const subtitle =
+    view === 'review'
+      ? 'Kiểm tra yêu cầu mới, duyệt hoặc từ chối với lý do rõ ràng.'
+      : 'Theo dõi toàn bộ dự án đang mở, thi công, hoàn thành hoặc đã hủy.';
 
   if (loading) {
     return (
-      <Layout title="Phê duyệt dự án">
+      <Layout title={title}>
         <div className="text-center py-12">Đang tải...</div>
       </Layout>
     );
   }
 
   return (
-    <Layout title="Phê duyệt dự án">
+    <Layout title={title}>
       <div className="space-y-6">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="bg-white rounded-xl border border-gray-100 p-5 shadow-sm">
-            <p className="text-sm text-gray-500">Chờ duyệt</p>
-            <p className="text-3xl font-bold text-yellow-600 mt-2">
-              {filter === 'PENDING' ? projects.length : summary.pending}
-            </p>
-          </div>
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+          <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
+            <div>
+              <p className="text-xs uppercase tracking-widest text-gray-400 font-bold">
+                Admin Console
+              </p>
+              <h1 className="text-2xl font-bold text-gray-900 mt-1">{title}</h1>
+              <p className="text-sm text-gray-500 mt-1">{subtitle}</p>
+            </div>
 
-          <div className="bg-white rounded-xl border border-gray-100 p-5 shadow-sm">
-            <p className="text-sm text-gray-500">Đang hiển thị trên sàn</p>
-            <p className="text-3xl font-bold text-green-600 mt-2">
-              {filter === 'APPROVED' ? projects.length : summary.approved}
-            </p>
+            <div className="flex flex-wrap gap-2">
+              <button
+                onClick={() => setView('review')}
+                className={`px-4 py-2 rounded-full text-sm font-medium transition flex items-center gap-2 ${
+                  view === 'review'
+                    ? 'bg-[#1a4f3a] text-white'
+                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                }`}
+              >
+                <ClipboardList size={16} />
+                Duyệt yêu cầu mới
+              </button>
+              <button
+                onClick={() => setView('monitor')}
+                className={`px-4 py-2 rounded-full text-sm font-medium transition flex items-center gap-2 ${
+                  view === 'monitor'
+                    ? 'bg-[#1a4f3a] text-white'
+                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                }`}
+              >
+                <Activity size={16} />
+                Giám sát dự án
+              </button>
+            </div>
           </div>
+        </div>
 
-          <div className="bg-white rounded-xl border border-gray-100 p-5 shadow-sm">
-            <p className="text-sm text-gray-500">Đã từ chối</p>
-            <p className="text-3xl font-bold text-red-600 mt-2">
-              {filter === 'REJECTED' ? projects.length : summary.rejected}
-            </p>
-          </div>
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          {view === 'review' ? (
+            <>
+              <StatBox label="Chờ duyệt" value={summary.PENDING} tone="yellow" />
+              <StatBox label="Đã duyệt" value={summary.APPROVED} tone="green" />
+              <StatBox label="Từ chối" value={summary.REJECTED} tone="red" />
+              <StatBox label="Tổng yêu cầu" value={projects.length} tone="gray" />
+            </>
+          ) : (
+            <>
+              <StatBox label="Đang mở" value={summary.OPEN} tone="blue" />
+              <StatBox label="Đang thi công" value={summary.IN_PROGRESS} tone="yellow" />
+              <StatBox label="Hoàn thành" value={summary.COMPLETED} tone="green" />
+              <StatBox label="Đã hủy" value={summary.CANCELLED} tone="red" />
+            </>
+          )}
         </div>
 
         <div className="flex flex-col xl:flex-row gap-4 items-start xl:items-end justify-between">
@@ -176,12 +268,12 @@ const AdminProjectsPage = () => {
           </div>
 
           <div className="flex flex-wrap gap-2">
-            {FILTERS.map((item) => (
+            {filterOptions.map((item) => (
               <button
                 key={item.value}
-                onClick={() => setFilter(item.value)}
+                onClick={() => setStatusFilter(item.value)}
                 className={`px-4 py-2 rounded-full text-sm font-medium transition ${
-                  filter === item.value
+                  statusFilter === item.value
                     ? 'bg-[#1a4f3a] text-white'
                     : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                 }`}
@@ -213,6 +305,10 @@ const AdminProjectsPage = () => {
                       <span className={`px-3 py-1 rounded-full text-xs font-semibold ${getApprovalBadge(project.approvalStatus)}`}>
                         {getApprovalLabel(project.approvalStatus)}
                       </span>
+
+                      <span className={`px-3 py-1 rounded-full text-xs font-semibold ${getProjectStatusBadge(project.status)}`}>
+                        {getProjectStatusLabel(project.status)}
+                      </span>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm text-gray-600">
@@ -242,8 +338,13 @@ const AdminProjectsPage = () => {
                       {project.style && <span className="badge badge-gray">{project.style}</span>}
                       {project.area && <span className="badge badge-amber">{project.area}m²</span>}
                       <span className="badge badge-gray">
-                        {project.bidType === 'DIRECT' ? 'Đấu thầu đóng' : 'Đấu thầu mở'}
+                        {project.bidType === 'NEGOTIABLE' ? 'Đấu thầu đóng' : 'Đấu thầu mở'}
                       </span>
+                      {typeof project.imageCount === 'number' && (
+                        <span className="badge badge-gray">
+                          {project.imageCount} ảnh
+                        </span>
+                      )}
                     </div>
 
                     {project.description && (
@@ -261,7 +362,15 @@ const AdminProjectsPage = () => {
                   </div>
 
                   <div className="flex flex-wrap gap-3 2xl:justify-end">
-                    {project.approvalStatus !== 'APPROVED' && (
+                    <Link
+                      to={`/projects/${project.id}`}
+                      className="flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-100 text-blue-700 hover:bg-blue-200 font-medium transition"
+                    >
+                      <Eye size={18} />
+                      Xem
+                    </Link>
+
+                    {view === 'review' && project.approvalStatus !== 'APPROVED' && (
                       <button
                         onClick={() => openReviewModal(project, 'approve')}
                         className="flex items-center gap-2 px-4 py-2 rounded-lg bg-green-100 text-green-700 hover:bg-green-200 font-medium transition"
@@ -271,7 +380,7 @@ const AdminProjectsPage = () => {
                       </button>
                     )}
 
-                    {project.approvalStatus !== 'REJECTED' && (
+                    {view === 'review' && project.approvalStatus !== 'REJECTED' && (
                       <button
                         onClick={() => openReviewModal(project, 'reject')}
                         className="flex items-center gap-2 px-4 py-2 rounded-lg bg-red-100 text-red-700 hover:bg-red-200 font-medium transition"
@@ -280,14 +389,6 @@ const AdminProjectsPage = () => {
                         Từ chối
                       </button>
                     )}
-
-                    <Link
-                      to={`/projects/${project.id}`}
-                      className="flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-100 text-blue-700 hover:bg-blue-200 font-medium transition"
-                    >
-                      <Eye size={18} />
-                      Xem
-                    </Link>
                   </div>
                 </div>
               </div>
@@ -303,7 +404,9 @@ const AdminProjectsPage = () => {
               {action === 'approve' ? 'Duyệt dự án' : 'Từ chối dự án'}
             </h2>
 
-            <p className="text-gray-600 text-sm">{selectedProject.name}</p>
+            <p className="text-gray-600 text-sm">
+              {selectedProject.name}
+            </p>
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -315,8 +418,8 @@ const AdminProjectsPage = () => {
                 onChange={(e) => setReason(e.target.value)}
                 placeholder={
                   action === 'approve'
-                    ? 'Ví dụ: Hồ sơ hợp lệ, được phép mở thầu...'
-                    : 'Ví dụ: Thiếu thông tin ngân sách hoặc mô tả chưa rõ...'
+                    ? 'Tùy chọn: ghi chú ngắn cho khách hàng...'
+                    : 'Ví dụ: Thiếu ảnh mặt bằng, mô tả chưa rõ, diện tích chưa hợp lệ...'
                 }
                 rows="4"
                 className="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-primary focus:border-transparent"
@@ -346,6 +449,23 @@ const AdminProjectsPage = () => {
         </div>
       )}
     </Layout>
+  );
+};
+
+const StatBox = ({ label, value, tone }) => {
+  const toneClasses = {
+    gray: 'bg-white border-gray-100 text-gray-900',
+    yellow: 'bg-yellow-50 border-yellow-100 text-yellow-800',
+    green: 'bg-green-50 border-green-100 text-green-800',
+    red: 'bg-red-50 border-red-100 text-red-800',
+    blue: 'bg-blue-50 border-blue-100 text-blue-800',
+  };
+
+  return (
+    <div className={`rounded-xl border p-4 shadow-sm ${toneClasses[tone] || toneClasses.gray}`}>
+      <div className="text-sm font-medium opacity-80">{label}</div>
+      <p className="text-2xl font-bold mt-2">{value}</p>
+    </div>
   );
 };
 

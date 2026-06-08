@@ -14,6 +14,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Locale;
 import java.util.stream.Collectors;
 
 @Service
@@ -24,10 +25,10 @@ public class AdminProjectService {
     private final NotificationService notificationService;
 
     @Transactional(readOnly = true)
-    public List<AdminProjectResponse> getProjects(String approvalStatus) {
+    public List<AdminProjectResponse> getProjects(String view, String statusFilter) {
         return projectRepository.findAllByOrderByCreatedAtDesc()
                 .stream()
-                .filter(project -> matchesApprovalStatus(project, approvalStatus))
+                .filter(project -> matchesView(project, view, statusFilter))
                 .map(this::toResponse)
                 .collect(Collectors.toList());
     }
@@ -37,19 +38,21 @@ public class AdminProjectService {
         Project project = projectRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy dự án"));
 
+        String note = normalizeReason(request);
+
         project.setApprovalStatus(Project.ApprovalStatus.APPROVED);
         project.setStatus(Project.Status.OPEN);
-        project.setAdminNote(normalizeReason(request));
+        project.setAdminNote(note);
         project.setApprovedAt(LocalDateTime.now());
 
         Project savedProject = projectRepository.save(project);
 
         notificationService.createNotification(
-        savedProject.getUser(),
-        Notification.NotifType.SYSTEM,
-        "Dự án #" + savedProject.getId()
-                + " - " + savedProject.getName()
-                + " đã được admin duyệt và hiển thị trên sàn."
+                savedProject.getUser(),
+                Notification.NotifType.SYSTEM,
+                "Dự án #" + savedProject.getId()
+                        + " - " + savedProject.getName()
+                        + " đã được admin duyệt và hiển thị trên sàn."
         );
         return toResponse(savedProject);
 
@@ -60,12 +63,34 @@ public class AdminProjectService {
         Project project = projectRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy dự án"));
 
+        String reason = normalizeReason(request);
+
         project.setApprovalStatus(Project.ApprovalStatus.REJECTED);
         project.setStatus(Project.Status.CANCELLED);
-        project.setAdminNote(normalizeReason(request));
+        project.setAdminNote(reason);
         project.setApprovedAt(null);
 
-        return toResponse(projectRepository.save(project));
+        Project savedProject = projectRepository.save(project);
+
+        notificationService.createNotification(
+                savedProject.getUser(),
+                Notification.NotifType.SYSTEM,
+                "Dự án #" + savedProject.getId()
+                        + " - " + savedProject.getName()
+                        + " đã bị từ chối. Lý do: " + (reason == null ? "Vui lòng cập nhật lại thông tin dự án." : reason)
+        );
+
+        return toResponse(savedProject);
+    }
+
+    private boolean matchesView(Project project, String view, String statusFilter) {
+        String normalizedView = view == null ? "review" : view.trim().toLowerCase(Locale.ROOT);
+
+        if ("monitor".equals(normalizedView)) {
+            return matchesProjectStatus(project, statusFilter);
+        }
+
+        return matchesApprovalStatus(project, statusFilter);
     }
 
     private boolean matchesApprovalStatus(Project project, String approvalStatus) {
@@ -78,6 +103,18 @@ public class AdminProjectService {
                 : project.getApprovalStatus();
 
         return current.name().equalsIgnoreCase(approvalStatus);
+    }
+
+    private boolean matchesProjectStatus(Project project, String statusFilter) {
+        if (statusFilter == null || statusFilter.isBlank() || statusFilter.equalsIgnoreCase("all")) {
+            return true;
+        }
+
+        Project.Status current = project.getStatus() == null
+                ? Project.Status.DRAFT
+                : project.getStatus();
+
+        return current.name().equalsIgnoreCase(statusFilter);
     }
 
     private String normalizeReason(AdminProjectReviewRequest request) {
@@ -103,6 +140,7 @@ public class AdminProjectService {
                 .description(project.getDescription())
                 .budgetMin(project.getBudgetMin())
                 .budgetMax(project.getBudgetMax())
+                .imageCount(project.getImageUrls() == null ? 0 : project.getImageUrls().size())
                 .bidType(project.getBidType() == null ? null : project.getBidType().name())
                 .status(project.getStatus() == null ? null : project.getStatus().name())
                 .approvalStatus(approvalStatus.name())

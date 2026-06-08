@@ -100,6 +100,7 @@ public class AdminDashboardService {
 
     private long countActiveProjects() {
         return projectRepository.findAll().stream()
+                .filter(project -> project.getApprovalStatus() == Project.ApprovalStatus.APPROVED)
                 .filter(project -> project.getStatus() == Project.Status.OPEN
                         || project.getStatus() == Project.Status.IN_PROGRESS)
                 .count();

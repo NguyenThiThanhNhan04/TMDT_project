@@ -17,6 +17,7 @@ public class AdminProjectResponse {
     private String description;
     private Long budgetMin;
     private Long budgetMax;
+    private Integer imageCount;
     private String bidType;
     private String status;
     private String approvalStatus;

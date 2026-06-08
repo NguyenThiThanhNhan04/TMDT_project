@@ -21,9 +21,10 @@ public class AdminProjectController {
 
     @GetMapping
     public ResponseEntity<ApiResponse<List<AdminProjectResponse>>> getProjects(
-            @RequestParam(value = "status", defaultValue = "all") String status
+            @RequestParam(value = "view", defaultValue = "review") String view,
+            @RequestParam(value = "status", defaultValue = "PENDING") String status
     ) {
-        return ResponseEntity.ok(ApiResponse.ok(adminProjectService.getProjects(status)));
+        return ResponseEntity.ok(ApiResponse.ok(adminProjectService.getProjects(view, status)));
     }
 
     @PostMapping("/{id}/approve")
