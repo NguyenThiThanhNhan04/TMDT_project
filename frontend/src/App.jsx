@@ -25,10 +25,8 @@ import NotificationsPage from './pages/NotificationsPage';
 import ProjectDetailConstructorPage from './pages/ProjectDetailConstructorPage';
 import BidPage from './pages/BidPage';
 import CreatePlanPage from './pages/CreatePlanPage';
-
-// Temporary components until I create them
-// const Notifications = () => <div className="p-8">Notifications (Coming soon)</div>;
-const MyBids = () => <div className="p-8">My Bids (Coming soon)</div>;
+import MyBidsPage from './pages/MyBidsPage';
+import CompletedJobsPage from './pages/CompletedJobsPage';
 
 const ProtectedRoute = ({ children, allowedRoles }) => {
   const { token, user } = useAuthStore();
@@ -100,7 +98,13 @@ function App() {
 
         <Route path="/bids" element={
           <ProtectedRoute allowedRoles={['CONTRACTOR']}>
-            <MyBids />
+            <MyBidsPage />
+          </ProtectedRoute>
+        } />
+
+        <Route path="/contractor/completed-jobs" element={
+          <ProtectedRoute allowedRoles={['CONTRACTOR']}>
+            <CompletedJobsPage />
           </ProtectedRoute>
         } />
 

@@ -3,6 +3,7 @@ package com.constructx.backend.features.constructor.dto;
 import lombok.*;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Getter
 @Setter
@@ -36,4 +37,10 @@ public class ContractorJobResponse {
     private LocalDateTime startedAt;
 
     private LocalDateTime createdAt;
+
+    // ảnh dự án
+    private List<String> imageUrls;
+
+    // tiến độ tổng hợp (% milestone COMPLETED)
+    private Integer totalProgress;
 }

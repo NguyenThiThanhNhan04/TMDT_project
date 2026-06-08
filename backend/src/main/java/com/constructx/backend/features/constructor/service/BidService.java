@@ -3,6 +3,7 @@ package com.constructx.backend.features.constructor.service;
 import com.constructx.backend.features.constructor.dto.request.CreateBidRequest;
 import com.constructx.backend.features.constructor.dto.BidDetailResponse;
 import com.constructx.backend.features.constructor.dto.BidResponse;
+import com.constructx.backend.features.constructor.dto.MyBidWithProjectResponse;
 import com.constructx.backend.features.constructor.entity.Bid;
 import com.constructx.backend.features.constructor.entity.BidDetail;
 import com.constructx.backend.features.project.entity.Project;
@@ -110,6 +111,66 @@ public class BidService {
                 .stream()
                 .map(this::mapBidResponse)
                 .toList();
+    }
+
+    // Lấy báo giá của mình kèm thông tin project
+    @Transactional(readOnly = true)
+    public List<MyBidWithProjectResponse> getMyBidsWithProject() {
+
+        User contractor = getCurrentUser();
+
+        return bidRepository.findMyBidsWithProject(contractor.getId())
+                .stream()
+                .map(this::mapMyBidWithProject)
+                .toList();
+    }
+
+    private MyBidWithProjectResponse mapMyBidWithProject(Bid bid) {
+
+        com.constructx.backend.features.project.entity.Project project = bid.getProject();
+        com.constructx.backend.features.user.entity.User owner = project.getUser();
+
+        List<BidDetailResponse> detailResponses = bid.getDetails()
+                .stream()
+                .map(detail -> BidDetailResponse.builder()
+                        .id(detail.getId())
+                        .itemName(detail.getItemName())
+                        .unit(detail.getUnit())
+                        .quantity(detail.getQuantity())
+                        .unitPrice(detail.getUnitPrice())
+                        .totalPrice(detail.getTotalPrice())
+                        .description(detail.getDescription())
+                        .sampleImage(detail.getSampleImage())
+                        .build())
+                .toList();
+
+        return MyBidWithProjectResponse.builder()
+                // bid info
+                .bidId(bid.getId())
+                .totalPrice(bid.getTotalPrice())
+                .estimatedDays(bid.getEstimatedDays())
+                .message(bid.getMessage())
+                .designImage(bid.getDesignImage())
+                .bidStatus(bid.getStatus().name())
+                .bidCreatedAt(bid.getCreatedAt())
+                .details(detailResponses)
+                // project info
+                .projectId(project.getId())
+                .projectName(project.getName())
+                .category(project.getCategory())
+                .area(project.getArea())
+                .style(project.getStyle())
+                .address(project.getAddress())
+                .description(project.getDescription())
+                .budgetMin(project.getBudgetMin())
+                .budgetMax(project.getBudgetMax())
+                .bidType(project.getBidType() != null ? project.getBidType().name() : null)
+                .projectStatus(project.getStatus().name())
+                .imageUrls(project.getImageUrls())
+                .ownerName(owner.getFullName())
+                .ownerPhone(owner.getPhoneNumber())
+                .projectCreatedAt(project.getCreatedAt())
+                .build();
     }
 
 

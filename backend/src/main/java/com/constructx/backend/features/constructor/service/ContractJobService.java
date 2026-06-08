@@ -114,13 +114,43 @@ public class ContractJobService {
                 .toList();
     }
 
+    // xem các job đã hoàn thành (status = COMPLETED)
+    @Transactional(readOnly = true)
+    public List<ContractorJobResponse> getMyCompletedJobs() {
+
+        String email = SecurityContextHolder.getContext()
+                .getAuthentication()
+                .getName();
+
+        List<ContractJob> jobs = contractJobRepository
+                .findCompletedContractorJobs(email);
+
+        return jobs.stream()
+                .map(this::mapContractorJobResponse)
+                .toList();
+    }
+
     private ContractorJobResponse mapContractorJobResponse(
             ContractJob job
     ) {
 
         Project project = job.getProject();
-
+        System.out.println(
+                "PROJECT = " + project.getId()
+                        + " IMAGES = " + project.getImageUrls()
+        );
         User customer = job.getCustomer();
+
+        // tính totalProgress từ workPlan nếu có
+        int totalProgress = 0;
+        if (job.getWorkPlan() != null) {
+            totalProgress = job.getWorkPlan()
+                    .getMilestones()
+                    .stream()
+                    .filter(m -> m.getStatus() == WorkMilestone.Status.COMPLETED)
+                    .mapToInt(WorkMilestone::getProgressPercent)
+                    .sum();
+        }
 
         return ContractorJobResponse.builder()
                 .jobId(job.getId())
@@ -136,6 +166,8 @@ public class ContractJobService {
                 .status(job.getStatus().name())
                 .startedAt(job.getStartedAt())
                 .createdAt(job.getCreatedAt())
+                .imageUrls(project.getImageUrls())
+                .totalProgress(totalProgress)
                 .build();
     }
 
@@ -147,7 +179,7 @@ public class ContractJobService {
                 .getName();
 
         ContractJob job = contractJobRepository
-                .findJobDetail(jobId)
+                .findById(jobId)
                 .orElseThrow(() ->
                         new RuntimeException("Job not found"));
 
@@ -189,6 +221,7 @@ public class ContractJobService {
                 .status(job.getStatus().name())
                 .totalProgress(totalProgress)
                 .workPlan(mapWorkPlan(job.getWorkPlan()))
+                .imageUrls(job.getProject().getImageUrls())
                 .build();
     }
     private WorkPlanDetailResponse mapWorkPlan(

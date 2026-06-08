@@ -14,7 +14,8 @@ import {
   User as UserIcon,
   Camera,
   Settings,
-  ClipboardCheck
+  ClipboardCheck,
+  CheckCircle2,
 } from 'lucide-react';
 import useAuthStore from '../store/useAuthStore';
 
@@ -38,6 +39,7 @@ const Sidebar = () => {
     { id: 'marketplace', label: 'Tìm việc mới', icon: <PlusCircle size={20} />, path: '/projects/browse' },
     // { id: 'bid', label: 'Gửi báo giá', icon: <PlusCircle size={20} />, path: '/projects/:id/bid' },
     { id: 'my-bids', label: 'Đấu thầu của tôi', icon: <History size={20} />, path: '/bids' },
+    { id: 'completed-jobs', label: 'Việc đã hoàn thành', icon: <CheckCircle2 size={20} />, path: '/contractor/completed-jobs' },
     { id: 'production-log', label: 'Nhật ký thi công', icon: <Camera size={20} />, path: '/production-log' },
     { id: 'portfolio', label: 'Hồ sơ năng lực', icon: <Image size={20} />, path: '/portfolio' },
     { id: 'wallet', label: 'Ví & Thu nhập', icon: <Wallet size={20} />, path: '/wallet' },
