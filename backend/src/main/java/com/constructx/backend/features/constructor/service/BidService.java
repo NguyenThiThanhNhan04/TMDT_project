@@ -54,6 +54,10 @@ public class BidService {
         Project project = projectRepository.findById(request.getProjectId())
                 .orElseThrow(() -> new RuntimeException("Project not found"));
 
+        if (project.getApprovalStatus() != Project.ApprovalStatus.APPROVED) {
+            throw new RuntimeException("Project is not approved");
+        }
+
         if (project.getStatus() != Project.Status.OPEN) {
             throw new RuntimeException("Project is not open");
         }

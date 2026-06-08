@@ -14,6 +14,7 @@ import ProjectMarketplacePage from './pages/ProjectMarketplacePage';
 import ProductionLogPage from './pages/ProductionLogPage';
 import PortfolioPage from './pages/PortfolioPage';
 import AdminProjectsPage from './pages/AdminProjectsPage';
+import AdminProjectMonitorPage from './pages/AdminProjectMonitorPage';
 import AdminDisputesPage from './pages/AdminDisputesPage';
 import AdminWithdrawalsPage from './pages/AdminWithdrawalsPage';
 import AdminUsersPage from './pages/AdminUsersPage';
@@ -111,6 +112,12 @@ function App() {
         <Route path="/admin/projects" element={
           <ProtectedRoute allowedRoles={['ADMIN']}>
             <AdminProjectsPage />
+          </ProtectedRoute>
+        } />
+
+        <Route path="/admin/projects-monitor" element={
+          <ProtectedRoute allowedRoles={['ADMIN']}>
+            <AdminProjectMonitorPage />
           </ProtectedRoute>
         } />
 
