@@ -82,7 +82,7 @@ public class WorkPlanService {
                     .progressPercent(item.getProgressPercent())
                     .deadline(item.getDeadline())
                     .stepOrder(step++)
-                    .status(WorkMilestone.Status.PENDING)
+                    .status(WorkMilestone.Status.IN_PROGRESS)
                     .build();
 
             milestones.add(milestone);

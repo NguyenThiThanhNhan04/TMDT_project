@@ -31,6 +31,15 @@ public class ContractJobController {
                 contractJobService.getMyJobs()
         );
     }
+
+    // xem các job đã hoàn thành (status = COMPLETED)
+    @GetMapping("/jobs/completed")
+    public ApiResponse<List<ContractorJobResponse>> getMyCompletedJobs() {
+        return ApiResponse.ok(
+                "Danh sách công việc đã hoàn thành",
+                contractJobService.getMyCompletedJobs()
+        );
+    }
     // xem chi tiết job dc thầu
     @GetMapping("/job/{jobId}")
     public ApiResponse<JobDetailResponse> getJobDetail(

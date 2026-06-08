@@ -2,6 +2,7 @@ package com.constructx.backend.features.constructor.controller;
 
 import com.constructx.backend.features.constructor.dto.request.CreateBidRequest;
 import com.constructx.backend.features.constructor.dto.BidResponse;
+import com.constructx.backend.features.constructor.dto.MyBidWithProjectResponse;
 import com.constructx.backend.features.constructor.service.BidService;
 import com.constructx.backend.shared.dto.ApiResponse;
 import jakarta.validation.Valid;
@@ -26,12 +27,20 @@ public class BidController {
         );
     }
 
-
-    // contractor xem bid của mình
+    // contractor xem bid của mình (đơn giản)
     @GetMapping("/my")
     public ApiResponse<List<BidResponse>> getMyBids() {
         return ApiResponse.ok(
                 bidService.getMyBids()
+        );
+    }
+
+    // contractor xem báo giá của mình kèm thông tin project
+    @GetMapping("/my-with-projects")
+    public ApiResponse<List<MyBidWithProjectResponse>> getMyBidsWithProject() {
+        return ApiResponse.ok(
+                "Danh sách báo giá",
+                bidService.getMyBidsWithProject()
         );
     }
 }

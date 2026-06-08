@@ -34,6 +34,18 @@ public interface BidRepository extends JpaRepository<Bid, Long> {
 
     boolean existsByProjectAndContractor(Project project, User contractor);
 
+    // Lấy tất cả bid của contractor kèm thông tin project và owner
+    @Query("""
+        SELECT DISTINCT b
+        FROM Bid b
+        JOIN FETCH b.project p
+        JOIN FETCH p.user owner
+        LEFT JOIN FETCH b.details
+        WHERE b.contractor.id = :contractorId
+        ORDER BY b.createdAt DESC
+    """)
+    List<Bid> findMyBidsWithProject(@Param("contractorId") Long contractorId);
+
 
     // từ chối tất cả các báo giá không dc chọn
     @Modifying

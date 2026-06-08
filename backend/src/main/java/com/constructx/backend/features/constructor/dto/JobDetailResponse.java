@@ -2,6 +2,8 @@ package com.constructx.backend.features.constructor.dto;
 
 import lombok.*;
 
+import java.util.List;
+
 @Getter
 @Setter
 @Builder
@@ -34,4 +36,7 @@ public class JobDetailResponse {
     private Integer totalProgress;
 
     private WorkPlanDetailResponse workPlan;
+
+    // ảnh dự án
+    private List<String> imageUrls;
 }
