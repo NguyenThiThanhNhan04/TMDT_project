@@ -19,5 +19,9 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
     Long sumAmountByStatus(
             @Param("status") Transaction.Status status
     );
+    List<Transaction> findByStatusAndTypeOrderByCreatedAtAsc(
+            Transaction.Status status,
+            Transaction.Type type
+    );
     List<Transaction> findByTypeOrderByCreatedAtDesc(Transaction.Type type);
 }

@@ -7,12 +7,12 @@ import {
   CheckCircle2,
   ChevronRight,
   MessageSquare,
-  Users,
-  AlertTriangle
+  Users
 } from 'lucide-react';
 import api from '../services/api';
 import useAuthStore from '../store/useAuthStore';
 import { Link } from 'react-router-dom';
+import AdminRevenueChart from '../components/AdminRevenueChart';
 
 const StatCard = ({ icon, label, value, change, changeType }) => (
   <div className="bg-white p-5 rounded-xl border border-gray-100 shadow-sm">
@@ -52,10 +52,11 @@ const DashboardPage = () => {
   const [wallet, setWallet] = useState(null);
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [revenuePeriod, setRevenuePeriod] = useState('month');
 
   useEffect(() => {
     fetchDashboardData();
-  }, [user]);
+  }, [user, revenuePeriod]);
 
   const fetchDashboardData = async () => {
     setLoading(true);
@@ -63,7 +64,9 @@ const DashboardPage = () => {
     try {
       if (user?.role === 'ADMIN') {
         const [statsRes, notifRes] = await Promise.all([
-          api.get('/admin/dashboard/stats'),
+          api.get('/admin/dashboard/stats', {
+            params: { period: revenuePeriod },
+          }),
           api.get('/notifications'),
         ]);
 
@@ -135,6 +138,7 @@ const DashboardPage = () => {
   const newProjectsCount = projects.length;
 
   const adminProjects = dashboardStats?.myProjects || [];
+  const adminRevenueTrend = dashboardStats?.revenueTrend || [];
 
   if (loading) {
     return (
@@ -179,31 +183,33 @@ const DashboardPage = () => {
           <>
             <StatCard
               icon={<TrendingUp size={20} />}
-              label="Tổng dự án"
-              value={dashboardStats?.newProjectsCount ?? 0}
+              label="Doanh thu nền tảng"
+              value={formatCurrency(dashboardStats?.platformRevenue ?? 0)}
+              change="Ước tính từ GMV"
+              changeType="up"
+            />
+
+            <StatCard
+              icon={<Wallet size={20} />}
+              label="GMV"
+              value={formatCurrency(dashboardStats?.gmv ?? 0)}
+              change={`${dashboardStats?.newProjectsCount ?? 0} dự án`}
+              changeType="up"
+            />
+
+            <StatCard
+              icon={<ClipboardList size={20} />}
+              label="Dự án đang hoạt động"
+              value={dashboardStats?.activeProjectsCount ?? 0}
               change={`${dashboardStats?.pendingProjects ?? 0} chờ duyệt`}
               changeType="up"
             />
 
             <StatCard
               icon={<Users size={20} />}
-              label="Nhà thầu active"
-              value={dashboardStats?.activeContractors ?? 0}
-              change={`${dashboardStats?.pendingPartners ?? 0} chờ duyệt`}
-              changeType="up"
-            />
-
-            <StatCard
-              icon={<Wallet size={20} />}
-              label="Dòng tiền thành công"
-              value={formatCurrency(dashboardStats?.totalRevenue || 0)}
-            />
-
-            <StatCard
-              icon={<AlertTriangle size={20} />}
-              label="Escrow / Tranh chấp"
-              value={formatCurrency(dashboardStats?.totalEscrow || 0)}
-              change={`${dashboardStats?.openDisputes ?? 0} vụ`}
+              label="Nhà thầu chờ duyệt"
+              value={dashboardStats?.pendingPartners ?? 0}
+              change={`${dashboardStats?.openDisputes ?? 0} tranh chấp`}
               changeType="down"
             />
           </>
@@ -247,7 +253,7 @@ const DashboardPage = () => {
             className="rounded-xl border border-yellow-100 bg-yellow-50 p-5 hover:shadow-md transition"
           >
             <p className="text-sm text-yellow-700 font-medium">
-              Cần duyệt dự án
+              Dự án chờ duyệt
             </p>
 
             <p className="text-3xl font-bold text-yellow-800 mt-2">
@@ -264,7 +270,7 @@ const DashboardPage = () => {
             className="rounded-xl border border-green-100 bg-green-50 p-5 hover:shadow-md transition"
           >
             <p className="text-sm text-green-700 font-medium">
-              Cần duyệt đối tác
+              Nhà thầu chờ duyệt
             </p>
 
             <p className="text-3xl font-bold text-green-800 mt-2">
@@ -292,6 +298,16 @@ const DashboardPage = () => {
               Mở trung tâm tranh chấp →
             </p>
           </Link>
+        </div>
+      )}
+
+      {user?.role === 'ADMIN' && (
+        <div className="mb-8">
+          <AdminRevenueChart
+            data={adminRevenueTrend}
+            period={revenuePeriod}
+            onPeriodChange={setRevenuePeriod}
+          />
         </div>
       )}
 

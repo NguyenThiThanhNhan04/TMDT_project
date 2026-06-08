@@ -13,11 +13,17 @@ import java.util.List;
 @AllArgsConstructor
 public class AdminDashboardStatsResponse {
 
+    private long gmv;
+
+    private long platformRevenue;
+
     private long totalRevenue;
 
     private long totalEscrow;
 
     private long newProjectsCount;
+
+    private long activeProjectsCount;
 
     private long activeContractors;
 
@@ -28,4 +34,8 @@ public class AdminDashboardStatsResponse {
     private long openDisputes;
 
     private List<AdminProjectSummary> myProjects;
+
+    private String revenuePeriod;
+
+    private List<AdminRevenueTrendPoint> revenueTrend;
 }
