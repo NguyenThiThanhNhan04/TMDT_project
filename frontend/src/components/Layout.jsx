@@ -14,7 +14,8 @@ import {
   User as UserIcon,
   Camera,
   Settings,
-  ClipboardCheck
+  ClipboardCheck,
+  UserCheck
 } from 'lucide-react';
 import useAuthStore from '../store/useAuthStore';
 
@@ -46,10 +47,11 @@ const Sidebar = () => {
 
   const adminNav = [
     { id: 'admin-dashboard', label: 'Tổng quan hệ thống', icon: <LayoutDashboard size={20} />, path: '/dashboard' },
+    { id: 'user-management', label: 'Quản lý tài khoản', icon: <UserIcon size={20} />, path: '/admin/users' },
     { id: 'admin-projects', label: 'Duyệt dự án', icon: <ClipboardCheck size={20} />, path: '/admin/projects' },
-    { id: 'user-management', label: 'Phê duyệt đối tác', icon: <UserIcon size={20} />, path: '/admin/users' },
-    { id: 'disputes', label: 'Tranh chấp', icon: <Shield size={20} />, path: '/admin/disputes' },
-    { id: 'allowances', label: 'Duyệt tiền', icon: <Shield size={20} />, path: '/admin/AdminWithdrawalsPage' },
+    { id: 'contractor-review', label: 'Duyệt nhà thầu', icon: <UserCheck size={20} />, path: '/admin/contractors' },
+    { id: 'disputes', label: 'Xử lý tranh chấp', icon: <Shield size={20} />, path: '/admin/disputes' },
+    { id: 'allowances', label: 'Duyệt tiền', icon: <Shield size={20} />, path: '/admin/withdrawals' },
     { id: 'settings', label: 'Cấu hình hệ thống', icon: <Settings size={20} />, path: '/admin/settings' },
     { id: 'profile', label: 'Cài đặt tài khoản', icon: <UserIcon size={20} />, path: '/profile' },
     { id: 'notifications', label: 'Thông báo', icon: <Bell size={20} />, path: '/notifications' },

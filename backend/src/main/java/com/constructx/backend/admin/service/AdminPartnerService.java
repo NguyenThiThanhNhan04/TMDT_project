@@ -1,5 +1,6 @@
 package com.constructx.backend.admin.service;
 
+import com.constructx.backend.admin.dto.request.AdminPartnerDecisionRequest;
 import com.constructx.backend.admin.dto.response.AdminPartnerResponse;
 import com.constructx.backend.features.notification.entity.Notification;
 import com.constructx.backend.features.notification.service.NotificationService;
@@ -44,7 +45,7 @@ public class AdminPartnerService {
     }
 
     @Transactional
-    public AdminPartnerResponse rejectPartner(Long id) {
+    public AdminPartnerResponse rejectPartner(Long id, AdminPartnerDecisionRequest request) {
         User contractor = userRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Đối tác không tồn tại"));
         ensureContractor(contractor);
@@ -52,10 +53,14 @@ public class AdminPartnerService {
         contractor.setApprovalStatus(User.ApprovalStatus.REJECTED);
         User savedContractor = userRepository.save(contractor);
 
+        String reason = request == null || request.getReason() == null || request.getReason().isBlank()
+                ? "Hồ sơ chưa đáp ứng yêu cầu phê duyệt."
+                : request.getReason().trim();
+
         notificationService.createNotification(
         savedContractor,
         Notification.NotifType.SYSTEM,
-        "Tài khoản nhà thầu của bạn đã bị từ chối bởi quản trị viên."
+        "Tài khoản nhà thầu của bạn đã bị từ chối bởi quản trị viên. Lý do: " + reason
         );
         return toResponse(savedContractor);
     }

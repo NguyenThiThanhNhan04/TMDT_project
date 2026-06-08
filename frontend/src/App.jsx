@@ -121,7 +121,17 @@ function App() {
             <AdminUsersPage />
           </ProtectedRoute>
         } />
+        <Route path="/admin/contractors" element={
+          <ProtectedRoute allowedRoles={['ADMIN']}>
+            <AdminUsersPage />
+          </ProtectedRoute>
+        } />
         <Route path="/admin/AdminWithdrawalsPage" element={
+          <ProtectedRoute allowedRoles={['ADMIN']}>
+            <AdminWithdrawalsPage />
+          </ProtectedRoute>
+        } />
+        <Route path="/admin/withdrawals" element={
           <ProtectedRoute allowedRoles={['ADMIN']}>
             <AdminWithdrawalsPage />
           </ProtectedRoute>
