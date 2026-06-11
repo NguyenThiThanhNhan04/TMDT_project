@@ -160,6 +160,15 @@ const ProjectDetailPage = () => {
                   Gửi báo giá ngay <MessageSquare size={18} />
                 </button>
               )}
+
+              {isOwner && (project.status === 'IN_PROGRESS' || project.status === 'COMPLETED') && project.jobId && (
+                <button
+                  onClick={() => navigate(`/production-log/${project.jobId}`)}
+                  className="btn btn-primary py-3 px-8 flex items-center gap-2 shadow-lg shadow-primary/20 bg-[#1a4f3a] hover:bg-[#143d2d] text-white rounded-xl font-semibold"
+                >
+                  Xem Nhật ký thi công & Nghiệm thu <ArrowLeft size={18} className="rotate-180" />
+                </button>
+              )}
             </div>
 
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">

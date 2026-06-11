@@ -27,6 +27,8 @@ public class JobDetailResponse {
 
     private String customerName;
 
+    private String customerEmail;
+
     private String contractorName;
 
     private Long agreedPrice;

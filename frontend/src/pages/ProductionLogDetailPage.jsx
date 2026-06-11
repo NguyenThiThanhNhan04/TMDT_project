@@ -9,6 +9,7 @@ import {
 import { useParams } from 'react-router-dom';
 import api from '../services/api';
 import toast from 'react-hot-toast';
+import useAuthStore from '../store/useAuthStore';
 
 // ─── helpers ───────────────────────────────────────────────
 const fmt = (v) => (v != null ? v.toLocaleString('vi-VN') + 'đ' : '—');
@@ -203,6 +204,7 @@ const UpdateForm = ({ milestone, onSuccess, onCancel }) => {
 // ─── Main Page ─────────────────────────────────────────────
 const ProductionLogDetailPage = () => {
     const { jobId } = useParams();
+    const { user } = useAuthStore();
     const [job, setJob] = useState(null);
     const [loading, setLoading] = useState(true);
     const [openFormId, setOpenFormId] = useState(null);
@@ -233,6 +235,19 @@ const ProductionLogDetailPage = () => {
         }
     };
 
+    const handleConfirmRelease = async (milestoneId) => {
+        if (!window.confirm('Xác nhận nghiệm thu? Hệ thống sẽ giải ngân tiền Escrow cho Nhà thầu ngay lập tức.')) return;
+        try {
+            await api.post(`/milestones/${milestoneId}/confirm`);
+            toast.success('Nghiệm thu & Giải ngân thành công!');
+            // Trigger wallet refresh
+            window.dispatchEvent(new CustomEvent('WALLET_DATA_CHANGED'));
+            fetchJobDetail();
+        } catch (err) {
+            toast.error(err?.response?.data?.message || 'Có lỗi xảy ra');
+        }
+    };
+
     const toggleCollapse = (id) => {
         setCollapsedIds(prev => {
             const next = new Set(prev);
@@ -255,6 +270,7 @@ const ProductionLogDetailPage = () => {
 
     const milestones = job.workPlan?.milestones ?? [];
     const completedCount = milestones.filter(m => m.status === 'COMPLETED').length;
+    const isCustomer = user?.email === job.customerEmail;
 
     return (
         <Layout title="Nhật ký thi công">
@@ -469,7 +485,7 @@ const ProductionLogDetailPage = () => {
                                         <span className="text-[10px] text-gray-400">{updateCount} cập nhật</span>
                                         <div className="flex flex-wrap gap-2">
 
-                                            {milestone.status === 'IN_PROGRESS' && (
+                                            {milestone.status === 'IN_PROGRESS' && !isCustomer && (
                                                 <>
                                                     {!isFormOpen ? (
                                                         <button
@@ -496,9 +512,18 @@ const ProductionLogDetailPage = () => {
                                             )}
 
                                             {milestone.status === 'WAITING_CONFIRMATION' && (
-                                                <div className="px-3 py-1.5 rounded-lg bg-amber-50 text-amber-700 font-semibold text-xs border border-amber-100 flex items-center gap-1.5">
-                                                    <Clock size={13} className="animate-pulse" /> Đang chờ khách hàng xác nhận
-                                                </div>
+                                                isCustomer ? (
+                                                    <button
+                                                        onClick={() => handleConfirmRelease(milestone.id)}
+                                                        className="px-3 py-1.5 rounded-lg bg-[#1a4f3a] text-white font-semibold text-xs flex items-center gap-1.5 hover:bg-[#143d2d] transition-colors"
+                                                    >
+                                                        <CheckCircle2 size={14} /> Nghiệm thu & Giải ngân
+                                                    </button>
+                                                ) : (
+                                                    <div className="px-3 py-1.5 rounded-lg bg-amber-50 text-amber-700 font-semibold text-xs border border-amber-100 flex items-center gap-1.5">
+                                                        <Clock size={13} className="animate-pulse" /> Đang chờ khách hàng xác nhận
+                                                    </div>
+                                                )
                                             )}
 
                                             {milestone.status === 'COMPLETED' && (

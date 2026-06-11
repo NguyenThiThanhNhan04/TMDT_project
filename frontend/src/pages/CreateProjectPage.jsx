@@ -20,6 +20,8 @@ const CreateProjectPage = () => {
   const [step, setStep] = useState(0);
   const [templates, setTemplates] = useState([]);
   const [loadingTemplates, setLoadingTemplates] = useState(true);
+  const [provinces, setProvinces] = useState([]);
+  const [districts, setDistricts] = useState([]);
   const [formData, setFormData] = useState({
     name: '',
     address: '',
@@ -50,8 +52,29 @@ const CreateProjectPage = () => {
         setLoadingTemplates(false);
       }
     };
+    const fetchProvinces = async () => {
+      try {
+        const response = await fetch('https://provinces.open-api.vn/api/?depth=2');
+        const data = await response.json();
+        setProvinces(data);
+      } catch (error) {
+        console.error('Lỗi khi lấy danh sách tỉnh thành:', error);
+      }
+    };
     fetchTemplates();
+    fetchProvinces();
   }, []);
+
+  const handleCityChange = (e) => {
+    const cityName = e.target.value;
+    setFormData({ ...formData, city: cityName, district: '' });
+    const selectedProvince = provinces.find(p => p.name === cityName);
+    if (selectedProvince) {
+      setDistricts(selectedProvince.districts);
+    } else {
+      setDistricts([]);
+    }
+  };
 
   const uploadImageToCloudinary = async (file) => {
     try {
@@ -269,23 +292,30 @@ const CreateProjectPage = () => {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="text-xs font-bold text-gray-500 uppercase tracking-widest block mb-2">Tỉnh / Thành phố</label>
-                  <input 
-                    type="text" 
+                  <select 
                     value={formData.city}
-                    onChange={(e) => setFormData({...formData, city: e.target.value})}
-                    placeholder="Ví dụ: TP. Hồ Chí Minh"
-                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm outline-none focus:border-primary focus:bg-white"
-                  />
+                    onChange={handleCityChange}
+                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm outline-none focus:border-[#1a4f3a] focus:bg-white"
+                  >
+                    <option value="">Chọn Tỉnh / Thành phố</option>
+                    {provinces.map((p) => (
+                      <option key={p.code} value={p.name}>{p.name}</option>
+                    ))}
+                  </select>
                 </div>
                 <div>
                   <label className="text-xs font-bold text-gray-500 uppercase tracking-widest block mb-2">Quận / Huyện</label>
-                  <input 
-                    type="text" 
+                  <select 
                     value={formData.district}
                     onChange={(e) => setFormData({...formData, district: e.target.value})}
-                    placeholder="Ví dụ: Quận 1"
-                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm outline-none focus:border-primary focus:bg-white"
-                  />
+                    disabled={!formData.city}
+                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm outline-none focus:border-[#1a4f3a] focus:bg-white disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <option value="">Chọn Quận / Huyện</option>
+                    {districts.map((d) => (
+                      <option key={d.code} value={d.name}>{d.name}</option>
+                    ))}
+                  </select>
                 </div>
               </div>
               <div>

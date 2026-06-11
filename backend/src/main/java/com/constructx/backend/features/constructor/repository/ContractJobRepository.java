@@ -41,6 +41,7 @@ public interface ContractJobRepository extends JpaRepository<ContractJob, Long> 
     );
 //    Optional<ContractJob> findJobDetail(
 //            @Param("jobId") Long jobId
-//    );
     Optional<ContractJob> findById(Long id);
+
+    Optional<ContractJob> findByProjectId(Long projectId);
 }

@@ -42,5 +42,7 @@ public class ProjectResponse {
 
     private LocalDateTime createdAt;
 
+    private Long jobId;
+
     private List<String> imageUrls;
 }
