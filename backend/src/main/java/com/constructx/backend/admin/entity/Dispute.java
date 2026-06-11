@@ -1,5 +1,6 @@
 package com.constructx.backend.admin.entity;
 
+import com.constructx.backend.features.constructor.entity.ContractJob;
 import com.constructx.backend.features.project.entity.Project;
 import com.constructx.backend.features.user.entity.User;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
@@ -22,6 +23,10 @@ public class Dispute {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "contract_job_id", nullable = false)
+    private ContractJob contractJob;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "project_id", nullable = false)

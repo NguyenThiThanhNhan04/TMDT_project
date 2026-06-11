@@ -24,6 +24,7 @@ public class AdminDisputeService {
     private final DisputeMessageRepository messageRepository;
     private final UserRepository userRepository;
 
+    @Transactional(readOnly = true)
     public List<DisputeResponse> getAllDisputes() {
         return disputeRepository.findAllByOrderByCreatedAtDesc()
                 .stream()
