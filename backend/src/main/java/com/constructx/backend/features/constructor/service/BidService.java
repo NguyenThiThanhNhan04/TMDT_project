@@ -25,189 +25,188 @@ import java.util.List;
 @RequiredArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class BidService {
-    BidRepository bidRepository;
-    ProjectRepository projectRepository;
-    UserRepository userRepository;
+        BidRepository bidRepository;
+        ProjectRepository projectRepository;
+        UserRepository userRepository;
 
-    private User getCurrentUser() {
-        String email = SecurityContextHolder.getContext()
-                .getAuthentication().getName();
-        return userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("User not found"));
-    }
-
-    @Transactional
-    public BidResponse createBid(CreateBidRequest request) {
-
-        String email = SecurityContextHolder
-                .getContext()
-                .getAuthentication()
-                .getName();
-
-        User contractor = userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("User not found"));
-
-        if (contractor.getRole() != User.Role.CONTRACTOR) {
-            throw new RuntimeException("Only contractor can bid");
+        private User getCurrentUser() {
+                String email = SecurityContextHolder.getContext()
+                                .getAuthentication().getName();
+                return userRepository.findByEmail(email)
+                                .orElseThrow(() -> new RuntimeException("User not found"));
         }
 
-        Project project = projectRepository.findById(request.getProjectId())
-                .orElseThrow(() -> new RuntimeException("Project not found"));
+        @Transactional
+        public BidResponse createBid(CreateBidRequest request) {
 
-        if (project.getApprovalStatus() != Project.ApprovalStatus.APPROVED) {
-            throw new RuntimeException("Project is not approved");
+                String email = SecurityContextHolder
+                                .getContext()
+                                .getAuthentication()
+                                .getName();
+
+                User contractor = userRepository.findByEmail(email)
+                                .orElseThrow(() -> new RuntimeException("User not found"));
+
+                if (contractor.getRole() != User.Role.CONTRACTOR) {
+                        throw new RuntimeException("Only contractor can bid");
+                }
+
+                Project project = projectRepository.findById(request.getProjectId())
+                                .orElseThrow(() -> new RuntimeException("Project not found"));
+
+                if (project.getApprovalStatus() != Project.ApprovalStatus.APPROVED) {
+                        throw new RuntimeException("Project is not approved");
+                }
+
+                if (project.getStatus() != Project.Status.OPEN) {
+                        throw new RuntimeException("Project is not open");
+                }
+
+                boolean exists = bidRepository.existsByProjectAndContractor(project, contractor);
+
+                if (exists) {
+                        throw new RuntimeException("You already bid this project");
+                }
+
+                Bid bid = Bid.builder()
+                                .project(project)
+                                .contractor(contractor)
+                                .estimatedDays(request.getEstimatedDays())
+                                .message(request.getMessage())
+                                .designImage(request.getDesignImage())
+                                .build();
+
+                List<BidDetail> details = request.getDetails()
+                                .stream()
+                                .map(d -> {
+
+                                        long totalPrice = Math.round(d.getQuantity() * d.getUnitPrice());
+
+                                        return BidDetail.builder()
+                                                        .bid(bid)
+                                                        .itemName(d.getItemName())
+                                                        .unit(d.getUnit())
+                                                        .quantity(d.getQuantity())
+                                                        .unitPrice(d.getUnitPrice())
+                                                        .totalPrice(totalPrice)
+                                                        .description(d.getDescription())
+                                                        .sampleImage(d.getSampleImage())
+                                                        .build();
+                                })
+                                .toList();
+                Long totalBidPrice = details.stream()
+                                .mapToLong(BidDetail::getTotalPrice)
+                                .sum();
+
+                bid.setTotalPrice(totalBidPrice);
+                bid.setDetails(details);
+
+                bidRepository.save(bid);
+
+                return mapBidResponse(bid);
         }
 
-        if (project.getStatus() != Project.Status.OPEN) {
-            throw new RuntimeException("Project is not open");
+        @Transactional(readOnly = true)
+        public List<BidResponse> getMyBids() {
+
+                User contractor = getCurrentUser();
+
+                return bidRepository.findMyBids(contractor.getId())
+                                .stream()
+                                .map(this::mapBidResponse)
+                                .toList();
         }
 
-        boolean exists = bidRepository.existsByProjectAndContractor(project, contractor);
+        // Lấy báo giá của mình kèm thông tin project
+        @Transactional(readOnly = true)
+        public List<MyBidWithProjectResponse> getMyBidsWithProject() {
 
-        if (exists) {
-            throw new RuntimeException("You already bid this project");
+                User contractor = getCurrentUser();
+
+                return bidRepository.findMyBidsWithProject(contractor.getId())
+                                .stream()
+                                .map(this::mapMyBidWithProject)
+                                .toList();
         }
 
-        Bid bid = Bid.builder()
-                .project(project)
-                .contractor(contractor)
-                .estimatedDays(request.getEstimatedDays())
-                .message(request.getMessage())
-                .designImage(request.getDesignImage())
-                .build();
+        private MyBidWithProjectResponse mapMyBidWithProject(Bid bid) {
 
-        List<BidDetail> details = request.getDetails()
-                .stream()
-                .map(d -> {
+                com.constructx.backend.features.project.entity.Project project = bid.getProject();
+                com.constructx.backend.features.user.entity.User owner = project.getUser();
 
-                    long totalPrice =
-                            Math.round(d.getQuantity() * d.getUnitPrice());
+                List<BidDetailResponse> detailResponses = bid.getDetails()
+                                .stream()
+                                .map(detail -> BidDetailResponse.builder()
+                                                .id(detail.getId())
+                                                .itemName(detail.getItemName())
+                                                .unit(detail.getUnit())
+                                                .quantity(detail.getQuantity())
+                                                .unitPrice(detail.getUnitPrice())
+                                                .totalPrice(detail.getTotalPrice())
+                                                .description(detail.getDescription())
+                                                .sampleImage(detail.getSampleImage())
+                                                .build())
+                                .toList();
 
-                    return BidDetail.builder()
-                            .bid(bid)
-                            .itemName(d.getItemName())
-                            .unit(d.getUnit())
-                            .quantity(d.getQuantity())
-                            .unitPrice(d.getUnitPrice())
-                            .totalPrice(totalPrice)
-                            .description(d.getDescription())
-                            .sampleImage(d.getSampleImage())
-                            .build();
-                })
-                .toList();
-        Long totalBidPrice = details.stream()
-                .mapToLong(BidDetail::getTotalPrice)
-                .sum();
+                return MyBidWithProjectResponse.builder()
+                                // bid info
+                                .bidId(bid.getId())
+                                .totalPrice(bid.getTotalPrice())
+                                .estimatedDays(bid.getEstimatedDays())
+                                .message(bid.getMessage())
+                                .designImage(bid.getDesignImage())
+                                .bidStatus(bid.getStatus().name())
+                                .bidCreatedAt(bid.getCreatedAt())
+                                .details(detailResponses)
+                                // project info
+                                .projectId(project.getId())
+                                .projectName(project.getName())
+                                .category(project.getCategory())
+                                .area(project.getArea())
+                                .style(project.getStyle())
+                                .address(project.getAddress())
+                                .description(project.getDescription())
+                                .budgetMin(project.getBudgetMin())
+                                .budgetMax(project.getBudgetMax())
+                                .bidType(project.getBidType() != null ? project.getBidType().name() : null)
+                                .projectStatus(project.getStatus().name())
+                                .imageUrls(project.getImageUrls())
+                                .ownerName(owner.getFullName())
+                                .ownerPhone(owner.getPhoneNumber())
+                                .projectCreatedAt(project.getCreatedAt())
+                                .build();
+        }
 
-        bid.setTotalPrice(totalBidPrice);
-        bid.setDetails(details);
+        private BidResponse mapBidResponse(Bid bid) {
 
-        bidRepository.save(bid);
+                List<BidDetailResponse> detailResponses = bid.getDetails()
+                                .stream()
+                                .map(detail -> BidDetailResponse.builder()
+                                                .id(detail.getId())
+                                                .itemName(detail.getItemName())
+                                                .unit(detail.getUnit())
+                                                .quantity(detail.getQuantity())
+                                                .unitPrice(detail.getUnitPrice())
+                                                .totalPrice(detail.getTotalPrice())
+                                                .description(detail.getDescription())
+                                                .sampleImage(detail.getSampleImage())
+                                                .build())
+                                .toList();
 
-        return mapBidResponse(bid);
-    }
-    @Transactional(readOnly = true)
-    public List<BidResponse> getMyBids() {
-
-        User contractor = getCurrentUser();
-
-        return bidRepository.findMyBids(contractor.getId())
-                .stream()
-                .map(this::mapBidResponse)
-                .toList();
-    }
-
-    // Lấy báo giá của mình kèm thông tin project
-    @Transactional(readOnly = true)
-    public List<MyBidWithProjectResponse> getMyBidsWithProject() {
-
-        User contractor = getCurrentUser();
-
-        return bidRepository.findMyBidsWithProject(contractor.getId())
-                .stream()
-                .map(this::mapMyBidWithProject)
-                .toList();
-    }
-
-    private MyBidWithProjectResponse mapMyBidWithProject(Bid bid) {
-
-        com.constructx.backend.features.project.entity.Project project = bid.getProject();
-        com.constructx.backend.features.user.entity.User owner = project.getUser();
-
-        List<BidDetailResponse> detailResponses = bid.getDetails()
-                .stream()
-                .map(detail -> BidDetailResponse.builder()
-                        .id(detail.getId())
-                        .itemName(detail.getItemName())
-                        .unit(detail.getUnit())
-                        .quantity(detail.getQuantity())
-                        .unitPrice(detail.getUnitPrice())
-                        .totalPrice(detail.getTotalPrice())
-                        .description(detail.getDescription())
-                        .sampleImage(detail.getSampleImage())
-                        .build())
-                .toList();
-
-        return MyBidWithProjectResponse.builder()
-                // bid info
-                .bidId(bid.getId())
-                .totalPrice(bid.getTotalPrice())
-                .estimatedDays(bid.getEstimatedDays())
-                .message(bid.getMessage())
-                .designImage(bid.getDesignImage())
-                .bidStatus(bid.getStatus().name())
-                .bidCreatedAt(bid.getCreatedAt())
-                .details(detailResponses)
-                // project info
-                .projectId(project.getId())
-                .projectName(project.getName())
-                .category(project.getCategory())
-                .area(project.getArea())
-                .style(project.getStyle())
-                .address(project.getAddress())
-                .description(project.getDescription())
-                .budgetMin(project.getBudgetMin())
-                .budgetMax(project.getBudgetMax())
-                .bidType(project.getBidType() != null ? project.getBidType().name() : null)
-                .projectStatus(project.getStatus().name())
-                .imageUrls(project.getImageUrls())
-                .ownerName(owner.getFullName())
-                .ownerPhone(owner.getPhoneNumber())
-                .projectCreatedAt(project.getCreatedAt())
-                .build();
-    }
-
-
-    private BidResponse mapBidResponse(Bid bid) {
-
-        List<BidDetailResponse> detailResponses = bid.getDetails()
-                .stream()
-                .map(detail -> BidDetailResponse.builder()
-                        .id(detail.getId())
-                        .itemName(detail.getItemName())
-                        .unit(detail.getUnit())
-                        .quantity(detail.getQuantity())
-                        .unitPrice(detail.getUnitPrice())
-                        .totalPrice(detail.getTotalPrice())
-                        .description(detail.getDescription())
-                        .sampleImage(detail.getSampleImage())
-                        .build())
-                .toList();
-
-        return BidResponse.builder()
-                .id(bid.getId())
-                .projectId(bid.getProject().getId())
-                .contractorId(bid.getContractor().getId())
-                .contractorName(bid.getContractor().getFullName())
-                .contractorEmail(bid.getContractor().getEmail())
-                .contractorPhone(bid.getContractor().getPhoneNumber())
-                .totalPrice(bid.getTotalPrice())
-                .estimatedDays(bid.getEstimatedDays())
-                .message(bid.getMessage())
-                .designImage(bid.getDesignImage())
-                .status(bid.getStatus().name())
-                .createdAt(bid.getCreatedAt())
-                .details(detailResponses)
-                .build();
-    }
+                return BidResponse.builder()
+                                .id(bid.getId())
+                                .projectId(bid.getProject().getId())
+                                .contractorId(bid.getContractor().getId())
+                                .contractorName(bid.getContractor().getFullName())
+                                .contractorEmail(bid.getContractor().getEmail())
+                                .contractorPhone(bid.getContractor().getPhoneNumber())
+                                .totalPrice(bid.getTotalPrice())
+                                .estimatedDays(bid.getEstimatedDays())
+                                .message(bid.getMessage())
+                                .designImage(bid.getDesignImage())
+                                .status(bid.getStatus().name())
+                                .createdAt(bid.getCreatedAt())
+                                .details(detailResponses)
+                                .build();
+        }
 }

@@ -6,7 +6,9 @@ import com.constructx.backend.features.constructor.dto.ProjectDetailResponse;
 import com.constructx.backend.features.constructor.dto.ProjectResponse;
 import com.constructx.backend.features.constructor.entity.Bid;
 import com.constructx.backend.features.constructor.entity.BidDetail;
+import com.constructx.backend.features.constructor.entity.ContractJob;
 import com.constructx.backend.features.constructor.repository.BidRepository;
+import com.constructx.backend.features.constructor.repository.ContractJobRepository;
 import com.constructx.backend.features.project.dto.ProjectRequest;
 import com.constructx.backend.features.project.entity.Project;
 import com.constructx.backend.features.user.entity.User;
@@ -26,6 +28,7 @@ public class ProjectService {
     private final ProjectRepository projectRepository;
     private final UserRepository userRepository;
     private final BidRepository bidRepository;
+    private final ContractJobRepository contractJobRepository;
 
     private User getCurrentUser() {
         String email = SecurityContextHolder.getContext()
@@ -98,6 +101,14 @@ public class ProjectService {
                 .map(this::mapBidResponse)
                 .toList();
 
+        Long jobId = null;
+        if (project.getStatus() == Project.Status.IN_PROGRESS || project.getStatus() == Project.Status.CLOSED) {
+            java.util.Optional<ContractJob> jobOpt = contractJobRepository.findByProjectId(projectId);
+            if (jobOpt.isPresent()) {
+                jobId = jobOpt.get().getId();
+            }
+        }
+
         ProjectResponse projectResponse = ProjectResponse.builder()
                 .id(project.getId())
                 .name(project.getName())
@@ -115,6 +126,7 @@ public class ProjectService {
                 .ownerEmail(project.getUser().getEmail())
                 .ownerPhone(project.getUser().getPhoneNumber())
                 .createdAt(project.getCreatedAt())
+                .jobId(jobId)
                 .imageUrls(project.getImageUrls())
                 .build();
 

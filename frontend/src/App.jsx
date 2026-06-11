@@ -186,7 +186,7 @@ function App() {
         } />
 
         <Route path="/production-log/:jobId" element={
-          <ProtectedRoute allowedRoles={['CONTRACTOR']}>
+          <ProtectedRoute allowedRoles={['CONTRACTOR', 'CUSTOMER', 'ADMIN']}>
             <ProductionLogDetailPage />
           </ProtectedRoute>
         } />

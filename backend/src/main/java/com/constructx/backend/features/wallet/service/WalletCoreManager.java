@@ -170,4 +170,48 @@ public class WalletCoreManager {
                 .description("Nhận thanh toán một phần từ phân xử tranh chấp dự án: " + projectCode).createdAt(LocalDateTime.now()).build();
         transactionRepository.save(constructorTrans);
     }
+
+    /**
+     * GIẢI NGÂN CHO NHÀ THẦU KHI NGHIỆM THU MILESTONE
+     * Trừ quỹ đóng băng (Escrow) của KH, cộng vào số dư thực tế của Nhà thầu.
+     */
+    @Transactional
+    public void executeMilestonePayment(Wallet customerWallet, Wallet contractorWallet, Long amount, Long platformFee, String orderCode, String description) {
+        Long amountToContractor = amount - platformFee;
+
+        // Trừ tiền đóng băng và tổng tài sản của khách hàng
+        customerWallet.setLockedAmount(customerWallet.getLockedAmount() - amount);
+        customerWallet.setBalance(customerWallet.getBalance() - amount);
+        walletRepository.save(customerWallet);
+
+        // Cộng tiền cho nhà thầu
+        contractorWallet.setBalance(contractorWallet.getBalance() + amountToContractor);
+        walletRepository.save(contractorWallet);
+
+        // Ghi log giao dịch cho khách hàng
+        Transaction customerTrans = Transaction.builder()
+                .wallet(customerWallet)
+                .amount(amount)
+                .type(Transaction.Type.RELEASE)
+                .status(Transaction.Status.SUCCESS)
+                .paymentGateway("CONSTRUCTX_ESCROW")
+                .gatewayOrderId("PAY-" + orderCode)
+                .description("Thanh toán cho: " + description)
+                .createdAt(LocalDateTime.now())
+                .build();
+        transactionRepository.save(customerTrans);
+
+        // Ghi log giao dịch cho nhà thầu
+        Transaction contractorTrans = Transaction.builder()
+                .wallet(contractorWallet)
+                .amount(amountToContractor)
+                .type(Transaction.Type.REVENUE)
+                .status(Transaction.Status.SUCCESS)
+                .paymentGateway("CONSTRUCTX_ESCROW")
+                .gatewayOrderId("REV-" + orderCode)
+                .description("Nhận thanh toán: " + description + (platformFee > 0 ? " (Đã trừ phí nền tảng " + platformFee + ")" : ""))
+                .createdAt(LocalDateTime.now())
+                .build();
+        transactionRepository.save(contractorTrans);
+    }
 }

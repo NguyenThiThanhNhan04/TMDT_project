@@ -6,6 +6,12 @@ import com.constructx.backend.features.constructor.entity.MilestoneUpdate;
 import com.constructx.backend.features.constructor.entity.WorkMilestone;
 import com.constructx.backend.features.constructor.repository.MilestoneUpdateRepository;
 import com.constructx.backend.features.constructor.repository.WorkMilestoneRepository;
+import com.constructx.backend.features.wallet.entity.Wallet;
+import com.constructx.backend.features.wallet.repository.WalletRepository;
+import com.constructx.backend.features.wallet.service.WalletCoreManager;
+import com.constructx.backend.features.notification.service.NotificationService;
+import com.constructx.backend.features.notification.entity.Notification;
+import com.constructx.backend.features.user.entity.User;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
@@ -15,155 +21,164 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class MilestoneService {
 
-    private final WorkMilestoneRepository workMilestoneRepository;
+        private final WorkMilestoneRepository workMilestoneRepository;
 
-    private final MilestoneUpdateRepository milestoneUpdateRepository;
+        private final MilestoneUpdateRepository milestoneUpdateRepository;
+        private final WalletRepository walletRepository;
+        private final WalletCoreManager walletCoreManager;
+        private final NotificationService notificationService;
 
-    @Transactional
-    public MilestoneUpdateResponse createUpdate(
-            Long milestoneId,
-            CreateMilestoneUpdateRequest request
-    ) {
+        @Transactional
+        public MilestoneUpdateResponse createUpdate(
+                        Long milestoneId,
+                        CreateMilestoneUpdateRequest request) {
 
-        String email = SecurityContextHolder.getContext()
-                .getAuthentication()
-                .getName();
+                String email = SecurityContextHolder.getContext()
+                                .getAuthentication()
+                                .getName();
 
-        WorkMilestone milestone = workMilestoneRepository
-                .findDetailById(milestoneId)
-                .orElseThrow(() ->
-                        new RuntimeException("Milestone not found"));
+                WorkMilestone milestone = workMilestoneRepository
+                                .findDetailById(milestoneId)
+                                .orElseThrow(() -> new RuntimeException("Milestone not found"));
 
-        // chỉ contractor của job mới được update
-        if (!milestone.getWorkPlan()
-                .getContractJob()
-                .getContractor()
-                .getEmail()
-                .equals(email)) {
+                // chỉ contractor của job mới được update
+                if (!milestone.getWorkPlan()
+                                .getContractJob()
+                                .getContractor()
+                                .getEmail()
+                                .equals(email)) {
 
-            throw new RuntimeException(
-                    "Bạn không có quyền cập nhật milestone này"
-            );
+                        throw new RuntimeException(
+                                        "Bạn không có quyền cập nhật milestone này");
+                }
+
+                // plan phải approved
+                if (milestone.getWorkPlan()
+                                .getStatus() != com.constructx.backend.features.constructor.entity.WorkPlan.Status.APPROVED) {
+
+                        throw new RuntimeException(
+                                        "Kế hoạch chưa được phê duyệt");
+                }
+
+                // nếu milestone đang pending thì chuyển sang in_progress
+                if (milestone.getStatus() == WorkMilestone.Status.PENDING) {
+
+                        milestone.setStatus(
+                                        WorkMilestone.Status.IN_PROGRESS);
+                }
+
+                MilestoneUpdate update = MilestoneUpdate.builder()
+                                .milestone(milestone)
+                                .title(request.getTitle())
+                                .content(request.getContent())
+                                .imageUrl(request.getImageUrl())
+                                .build();
+
+                milestoneUpdateRepository.save(update);
+
+                return mapUpdateResponse(update);
         }
 
-        // plan phải approved
-        if (milestone.getWorkPlan().getStatus()
-                != com.constructx.backend.features.constructor.entity.WorkPlan.Status.APPROVED) {
+        private MilestoneUpdateResponse mapUpdateResponse(
+                        MilestoneUpdate update) {
 
-            throw new RuntimeException(
-                    "Kế hoạch chưa được phê duyệt"
-            );
+                return MilestoneUpdateResponse.builder()
+                                .id(update.getId())
+                                .milestoneId(update.getMilestone().getId())
+                                .title(update.getTitle())
+                                .content(update.getContent())
+                                .imageUrl(update.getImageUrl())
+                                .createdAt(update.getCreatedAt())
+                                .build();
         }
 
-        // nếu milestone đang pending thì chuyển sang in_progress
-        if (milestone.getStatus()
-                == WorkMilestone.Status.PENDING) {
+        // chờ xác nhận
+        @Transactional
+        public void submitMilestone(Long milestoneId) {
 
-            milestone.setStatus(
-                    WorkMilestone.Status.IN_PROGRESS
-            );
+                String email = SecurityContextHolder.getContext()
+                                .getAuthentication()
+                                .getName();
+
+                WorkMilestone milestone = workMilestoneRepository
+                                .findDetailById(milestoneId)
+                                .orElseThrow(() -> new RuntimeException("Milestone not found"));
+
+                if (!milestone.getWorkPlan()
+                                .getContractJob()
+                                .getContractor()
+                                .getEmail()
+                                .equals(email)) {
+
+                        throw new RuntimeException(
+                                        "Bạn không có quyền");
+                }
+
+                if (milestone.getStatus() != WorkMilestone.Status.IN_PROGRESS) {
+
+                        throw new RuntimeException(
+                                        "Milestone chưa thi công");
+                }
+
+                milestone.setStatus(
+                                WorkMilestone.Status.WAITING_CONFIRMATION);
+
+                User customer = milestone.getWorkPlan().getContractJob().getCustomer();
+                notificationService.createNotification(
+                        customer, 
+                        Notification.NotifType.SYSTEM, 
+                        "Nhà thầu " + milestone.getWorkPlan().getContractJob().getContractor().getFullName() + " vừa yêu cầu nghiệm thu cột mốc: " + milestone.getTitle() + ". Vui lòng vào xem Nhật ký thi công và xác nhận giải ngân."
+                );
         }
 
-        MilestoneUpdate update = MilestoneUpdate.builder()
-                .milestone(milestone)
-                .title(request.getTitle())
-                .content(request.getContent())
-                .imageUrl(request.getImageUrl())
-                .build();
+        @Transactional
+        public void confirmMilestone(Long milestoneId) {
 
-        milestoneUpdateRepository.save(update);
+                String email = SecurityContextHolder.getContext()
+                                .getAuthentication()
+                                .getName();
 
-        return mapUpdateResponse(update);
-    }
+                WorkMilestone milestone = workMilestoneRepository
+                                .findDetailById(milestoneId)
+                                .orElseThrow(() -> new RuntimeException("Milestone not found"));
 
-    private MilestoneUpdateResponse mapUpdateResponse(
-            MilestoneUpdate update
-    ) {
+                String customerEmail = milestone.getWorkPlan()
+                                .getContractJob()
+                                .getCustomer()
+                                .getEmail();
 
-        return MilestoneUpdateResponse.builder()
-                .id(update.getId())
-                .milestoneId(update.getMilestone().getId())
-                .title(update.getTitle())
-                .content(update.getContent())
-                .imageUrl(update.getImageUrl())
-                .createdAt(update.getCreatedAt())
-                .build();
-    }
+                if (!customerEmail.equals(email)) {
 
-    // chờ xác nhận
-    @Transactional
-    public void submitMilestone(Long milestoneId) {
+                        throw new RuntimeException(
+                                        "Bạn không có quyền");
+                }
 
-        String email = SecurityContextHolder.getContext()
-                .getAuthentication()
-                .getName();
+                if (milestone.getStatus() != WorkMilestone.Status.WAITING_CONFIRMATION) {
 
-        WorkMilestone milestone = workMilestoneRepository
-                .findDetailById(milestoneId)
-                .orElseThrow(() ->
-                        new RuntimeException("Milestone not found"));
+                        throw new RuntimeException(
+                                        "Milestone chưa gửi xác nhận");
+                }
 
-        if (!milestone.getWorkPlan()
-                .getContractJob()
-                .getContractor()
-                .getEmail()
-                .equals(email)) {
+                milestone.setStatus(
+                                WorkMilestone.Status.COMPLETED);
 
-            throw new RuntimeException(
-                    "Bạn không có quyền"
-            );
+                Long customerId = milestone.getWorkPlan().getContractJob().getCustomer().getId();
+                Long contractorId = milestone.getWorkPlan().getContractJob().getContractor().getId();
+                String jobPrefix = "JOB-" + milestone.getWorkPlan().getContractJob().getId();
+
+                Wallet customerWallet = walletRepository.findByUserIdForUpdate(customerId)
+                                .orElseThrow(() -> new RuntimeException("Không tìm thấy ví khách hàng"));
+
+                Wallet contractorWallet = walletRepository.findByUserIdForUpdate(contractorId)
+                                .orElseThrow(() -> new RuntimeException("Không tìm thấy ví nhà thầu"));
+
+                // Giải ngân
+                walletCoreManager.executeMilestonePayment(
+                                customerWallet,
+                                contractorWallet,
+                                milestone.getAmount(),
+                                0L, // platform fee = 0
+                                jobPrefix + "-MS-" + milestone.getId(),
+                                "Hoàn thành cột mốc: " + milestone.getTitle());
         }
-
-        if (milestone.getStatus()
-                != WorkMilestone.Status.IN_PROGRESS) {
-
-            throw new RuntimeException(
-                    "Milestone chưa thi công"
-            );
-        }
-
-        milestone.setStatus(
-                WorkMilestone.Status.WAITING_CONFIRMATION
-        );
-    }
-
-    @Transactional
-    public void confirmMilestone(Long milestoneId) {
-
-        String email = SecurityContextHolder.getContext()
-                .getAuthentication()
-                .getName();
-
-        WorkMilestone milestone = workMilestoneRepository
-                .findDetailById(milestoneId)
-                .orElseThrow(() ->
-                        new RuntimeException("Milestone not found"));
-
-        String customerEmail = milestone.getWorkPlan()
-                .getContractJob()
-                .getCustomer()
-                .getEmail();
-
-        if (!customerEmail.equals(email)) {
-
-            throw new RuntimeException(
-                    "Bạn không có quyền"
-            );
-        }
-
-        if (milestone.getStatus()
-                != WorkMilestone.Status.WAITING_CONFIRMATION) {
-
-            throw new RuntimeException(
-                    "Milestone chưa gửi xác nhận"
-            );
-        }
-
-        milestone.setStatus(
-                WorkMilestone.Status.COMPLETED
-        );
-
-        // TODO:
-        // giải ngân milestone amount
-    }
 }
