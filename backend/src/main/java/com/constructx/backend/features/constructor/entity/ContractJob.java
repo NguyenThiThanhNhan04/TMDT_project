@@ -36,11 +36,7 @@ public class ContractJob {
     @JoinColumn(name = "contractor_id", nullable = false)
     private User contractor;
 
-    @OneToOne(
-            mappedBy = "contractJob",
-            fetch = FetchType.LAZY,
-            cascade = CascadeType.ALL
-    )
+    @OneToOne(mappedBy = "contractJob", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
     private WorkPlan workPlan;
 
     private Long agreedPrice;
@@ -61,6 +57,7 @@ public class ContractJob {
         ACCEPTED,
         IN_PROGRESS,
         COMPLETED,
-        CANCELLED
+        CANCELLED,
+        DISPUTED
     }
 }

@@ -209,6 +209,13 @@ const ProductionLogDetailPage = () => {
     const [loading, setLoading] = useState(true);
     const [openFormId, setOpenFormId] = useState(null);
     const [collapsedIds, setCollapsedIds] = useState(new Set());
+    const [showDisputeModal, setShowDisputeModal] = useState(false);
+    const [disputeReason, setDisputeReason] = useState('');
+    const [disputeSubmitting, setDisputeSubmitting] = useState(false);
+    const [reviewRating, setReviewRating] = useState(5);
+    const [reviewComment, setReviewComment] = useState('');
+    const [reviewSubmitting, setReviewSubmitting] = useState(false);
+    const [reviewSubmitted, setReviewSubmitted] = useState(false);
 
     useEffect(() => { fetchJobDetail(); }, [jobId]);
 
@@ -245,6 +252,36 @@ const ProductionLogDetailPage = () => {
             fetchJobDetail();
         } catch (err) {
             toast.error(err?.response?.data?.message || 'Có lỗi xảy ra');
+        }
+    };
+
+    const handleSubmitDispute = async () => {
+        if (!disputeReason.trim()) return toast.error('Vui lòng nhập lý do khiếu nại');
+        try {
+            setDisputeSubmitting(true);
+            await api.post(`/disputes/job/${jobId}`, { reason: disputeReason });
+            toast.success('Đã gửi khiếu nại thành công! Admin sẽ xử lý sớm nhất.');
+            setShowDisputeModal(false);
+            setDisputeReason('');
+            fetchJobDetail();
+        } catch (err) {
+            toast.error(err?.response?.data?.message || 'Có lỗi xảy ra');
+        } finally {
+            setDisputeSubmitting(false);
+        }
+    };
+
+    const handleSubmitReview = async () => {
+        if (!reviewComment.trim()) return toast.error('Vui lòng nhập nhận xét');
+        try {
+            setReviewSubmitting(true);
+            await api.post('/reviews', { jobId: Number(jobId), rating: reviewRating, comment: reviewComment });
+            toast.success('Đánh giá nhà thầu thành công!');
+            setReviewSubmitted(true);
+        } catch (err) {
+            toast.error(err?.response?.data?.message || 'Có lỗi xảy ra');
+        } finally {
+            setReviewSubmitting(false);
         }
     };
 
@@ -544,7 +581,121 @@ const ProductionLogDetailPage = () => {
                         );
                     })
                 )}
+
+                {/* ── DISPUTE BUTTON (Customer only) ── */}
+                {isCustomer && job.status !== 'COMPLETED' && job.status !== 'DISPUTED' && (
+                    <div className="bg-white rounded-2xl border border-red-100 shadow-sm p-5">
+                        <button
+                            onClick={() => setShowDisputeModal(true)}
+                            className="w-full py-3 rounded-xl bg-red-50 border border-red-200 text-red-600 font-bold text-sm hover:bg-red-100 transition-colors flex items-center justify-center gap-2"
+                        >
+                            ⚠️ Khiếu nại dự án
+                        </button>
+                        <p className="text-[11px] text-gray-400 text-center mt-2">
+                            Mở tranh chấp nếu nhà thầu làm sai, chậm tiến độ hoặc yêu cầu thêm tiền ngoài hợp đồng
+                        </p>
+                    </div>
+                )}
+
+                {/* ── DISPUTED STATUS ── */}
+                {job.status === 'DISPUTED' && (
+                    <div className="bg-red-50 rounded-2xl border border-red-200 shadow-sm p-5 text-center">
+                        <div className="text-red-600 font-bold text-sm mb-1">⚠️ Dự án đang trong tranh chấp</div>
+                        <p className="text-xs text-red-500">Admin đang xem xét và xử lý khiếu nại của bạn. Mọi giải ngân đã bị tạm dừng.</p>
+                    </div>
+                )}
+
+                {/* ── REVIEW SECTION (Customer, after COMPLETED) ── */}
+                {isCustomer && job.status === 'COMPLETED' && !reviewSubmitted && !job.isReviewed && (
+                    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+                        <h3 className="font-bold text-gray-900 mb-4 text-sm">⭐ Đánh giá nhà thầu</h3>
+                        <div className="space-y-4">
+                            <div>
+                                <label className="block text-xs font-medium text-gray-500 mb-2">Số sao</label>
+                                <div className="flex gap-1">
+                                    {[1, 2, 3, 4, 5].map(star => (
+                                        <button
+                                            key={star}
+                                            onClick={() => setReviewRating(star)}
+                                            className={`text-2xl transition-colors ${star <= reviewRating ? 'text-yellow-400' : 'text-gray-200'} hover:text-yellow-400`}
+                                        >
+                                            ★
+                                        </button>
+                                    ))}
+                                    <span className="ml-2 text-sm text-gray-500 self-center">{reviewRating}/5</span>
+                                </div>
+                            </div>
+                            <div>
+                                <label className="block text-xs font-medium text-gray-500 mb-1">Nhận xét</label>
+                                <textarea
+                                    rows={3}
+                                    value={reviewComment}
+                                    onChange={e => setReviewComment(e.target.value)}
+                                    placeholder="Chia sẻ trải nghiệm của bạn với nhà thầu..."
+                                    className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#1a4f3a]/20 focus:border-[#1a4f3a]/40"
+                                />
+                            </div>
+                            <button
+                                onClick={handleSubmitReview}
+                                disabled={reviewSubmitting}
+                                className="px-6 py-2.5 rounded-xl bg-[#1a4f3a] text-white font-bold text-sm hover:bg-[#143d2d] transition-colors disabled:opacity-40 flex items-center gap-2"
+                            >
+                                {reviewSubmitting && <Loader2 size={14} className="animate-spin" />}
+                                {reviewSubmitting ? 'Đang gửi...' : 'Gửi đánh giá'}
+                            </button>
+                        </div>
+                    </div>
+                )}
+
+                {(reviewSubmitted || job.isReviewed) && (
+                    <div className="bg-emerald-50 rounded-2xl border border-emerald-200 shadow-sm p-5 text-center">
+                        <div className="text-emerald-600 font-bold text-sm">✅ Đã đánh giá nhà thầu!</div>
+                        <p className="text-xs text-emerald-500 mt-1">Cảm ơn bạn đã đóng góp đánh giá cho hệ thống.</p>
+                    </div>
+                )}
+
             </div>
+
+            {/* ── DISPUTE MODAL ── */}
+            {showDisputeModal && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+                    <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6">
+                        <div className="flex items-center justify-between mb-4">
+                            <h3 className="font-bold text-gray-900">⚠️ Mở khiếu nại</h3>
+                            <button onClick={() => setShowDisputeModal(false)} className="text-gray-400 hover:text-gray-600">
+                                <X size={20} />
+                            </button>
+                        </div>
+                        <p className="text-xs text-gray-500 mb-4">
+                            Khi bạn mở khiếu nại, trạng thái dự án sẽ chuyển sang <strong>Tranh chấp</strong> và mọi giải ngân sẽ bị tạm dừng cho đến khi Admin xử lý.
+                        </p>
+                        <textarea
+                            rows={4}
+                            value={disputeReason}
+                            onChange={e => setDisputeReason(e.target.value)}
+                            placeholder="Nhập lý do khiếu nại (VD: Nhà thầu thi công sai kích thước, chậm tiến độ...)"
+                            className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-red-200 focus:border-red-300 mb-4"
+                        />
+                        <div className="flex gap-2 justify-end">
+                            <button
+                                onClick={() => setShowDisputeModal(false)}
+                                className="px-4 py-2 rounded-lg border border-gray-200 text-gray-500 text-sm font-medium hover:bg-gray-50"
+                            >
+                                Hủy
+                            </button>
+                            <button
+                                onClick={handleSubmitDispute}
+                                disabled={disputeSubmitting}
+                                className="px-5 py-2 rounded-lg bg-red-600 text-white font-bold text-sm hover:bg-red-700 disabled:opacity-40 flex items-center gap-2"
+                            >
+                                {disputeSubmitting && <Loader2 size={14} className="animate-spin" />}
+                                {disputeSubmitting ? 'Đang gửi...' : 'Xác nhận khiếu nại'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
         </Layout>
     );
 };

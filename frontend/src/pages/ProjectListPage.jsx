@@ -35,7 +35,7 @@ const ProjectListPage = () => {
     switch (status) {
       case 'OPEN': return <span className="badge badge-blue">Đang tuyển</span>;
       case 'IN_PROGRESS': return <span className="badge badge-amber">Đang thi công</span>;
-      case 'COMPLETED': return <span className="badge badge-green">Hoàn thành</span>;
+      case 'CLOSED': return <span className="badge badge-green">Hoàn thành</span>;
       default: return <span className="badge badge-gray">{status}</span>;
     }
   };

@@ -39,6 +39,7 @@ public class JobDetailResponse {
 
     private WorkPlanDetailResponse workPlan;
 
-    // ảnh dự án
     private List<String> imageUrls;
+
+    private Boolean isReviewed;
 }

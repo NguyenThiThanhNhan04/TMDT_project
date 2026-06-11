@@ -8,6 +8,7 @@ import com.constructx.backend.features.user.entity.User;
 import com.constructx.backend.features.user.repository.UserRepository;
 import com.constructx.backend.features.constructor.repository.BidRepository;
 import com.constructx.backend.features.constructor.repository.ContractJobRepository;
+import com.constructx.backend.features.review.repository.ReviewRepository;
 import com.constructx.backend.features.wallet.entity.Wallet;
 import com.constructx.backend.features.wallet.entity.Transaction;
 import com.constructx.backend.features.wallet.repository.WalletRepository;
@@ -30,6 +31,7 @@ public class ContractJobService {
         private final UserRepository userRepository;
         private final WalletRepository walletRepository;
         private final WalletCoreManager walletCoreManager;
+        private final ReviewRepository reviewRepository;
 
         private User getCurrentUser() {
                 String email = SecurityContextHolder.getContext()
@@ -221,6 +223,11 @@ public class ContractJobService {
                                         .sum();
                 }
 
+                boolean isReviewed = false;
+                if (job.getStatus() == ContractJob.Status.COMPLETED) {
+                        isReviewed = reviewRepository.existsByContractJobIdAndReviewerId(job.getId(), job.getCustomer().getId());
+                }
+
                 return JobDetailResponse.builder()
                                 .jobId(job.getId())
                                 .projectName(job.getProject().getName())
@@ -237,6 +244,7 @@ public class ContractJobService {
                                 .totalProgress(totalProgress)
                                 .workPlan(mapWorkPlan(job.getWorkPlan()))
                                 .imageUrls(job.getProject().getImageUrls())
+                                .isReviewed(isReviewed)
                                 .build();
         }
 

@@ -180,5 +180,15 @@ public class MilestoneService {
                                 0L, // platform fee = 0
                                 jobPrefix + "-MS-" + milestone.getId(),
                                 "Hoàn thành cột mốc: " + milestone.getTitle());
+
+                // Kiểm tra xem tất cả milestone đã hoàn thành chưa
+                boolean allCompleted = milestone.getWorkPlan().getMilestones().stream()
+                                .allMatch(m -> m.getStatus() == WorkMilestone.Status.COMPLETED);
+
+                if (allCompleted) {
+                        milestone.getWorkPlan().getContractJob().setStatus(com.constructx.backend.features.constructor.entity.ContractJob.Status.COMPLETED);
+                        milestone.getWorkPlan().getContractJob().setCompletedAt(java.time.LocalDateTime.now());
+                        milestone.getWorkPlan().getContractJob().getProject().setStatus(com.constructx.backend.features.project.entity.Project.Status.CLOSED);
+                }
         }
 }
